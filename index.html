@@ -220,7 +220,7 @@
                 <div class="section-label">3. SENJATA UTAMA:</div>
                 <select id="weapon-select">
                     <option value="cannon">💥 CANNON (PELURU STANDAR)</option>
-                    <option value="shotgun">🔱 SHOTGUN (3 PELURU SEBAR)</option>
+                    <option value="shotgun">ff SHOTGUN (3 PELURU SEBAR)</option>
                     <option value="rocket">🚀 ROCKET (RUDAL AREA BLAST)</option>
                 </select>
 
@@ -758,16 +758,59 @@
             }
         }
 
+        // --- DUAL FUNCTION CONTROLLER LOGIC ---
         let keys = {};
+        const ctrlState = {
+            ArrowUp: { isHolding: false, timer: null },
+            ArrowDown: { isHolding: false, timer: null },
+            ArrowLeft: { isHolding: false, timer: null },
+            ArrowRight: { isHolding: false, timer: null }
+        };
+
         window.addEventListener('keydown', e => keys[e.key] = true);
         window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function handleSingleTapAction(keyName) {
+            if (!tanks[mySlot] || !tanks[mySlot].alive) return;
+            // Tap Cepat = Putar Arah Meriam Tanpa Berjalan
+            if (keyName === 'ArrowUp') tanks[mySlot].angle = 270;
+            if (keyName === 'ArrowDown') tanks[mySlot].angle = 90;
+            if (keyName === 'ArrowLeft') tanks[mySlot].angle = 180;
+            if (keyName === 'ArrowRight') tanks[mySlot].angle = 0;
+
+            if(!isBotMode && !isSpectator) {
+                broadcast({ type: 'SYNC_POS', slot: mySlot, x: tanks[mySlot].x, y: tanks[mySlot].y, angle: tanks[mySlot].angle });
+            }
+        }
 
         function bindTouch(id, keyName) {
             let el = document.getElementById(id);
             if(!el) return;
 
-            const press = (e) => { if(e.cancelable) e.preventDefault(); keys[keyName] = true; };
-            const release = (e) => { if(e.cancelable) e.preventDefault(); keys[keyName] = false; };
+            const HOLD_DELAY = 180; // Milidetik batas toleransi hold
+
+            const press = (e) => { 
+                if(e.cancelable) e.preventDefault(); 
+                clearTimeout(ctrlState[keyName].timer);
+
+                ctrlState[keyName].timer = setTimeout(() => {
+                    ctrlState[keyName].isHolding = true;
+                    keys[keyName] = true; // Aktifkan jalan terus jika ditahan >180ms
+                }, HOLD_DELAY);
+            };
+
+            const release = (e) => { 
+                if(e.cancelable) e.preventDefault(); 
+                clearTimeout(ctrlState[keyName].timer);
+
+                if (!ctrlState[keyName].isHolding) {
+                    // Jika dilepas sebelum 180ms -> Hit sebagai Tap
+                    handleSingleTapAction(keyName);
+                }
+
+                ctrlState[keyName].isHolding = false;
+                keys[keyName] = false; 
+            };
 
             el.addEventListener('touchstart', press, {passive: false});
             el.addEventListener('touchend', release, {passive: false});
