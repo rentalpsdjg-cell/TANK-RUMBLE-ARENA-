@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - MEGA ARENA EDITION</title>
+    <title>TANK RUMBLE VIP - ULTRA JUMBO ARENA EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -176,7 +176,7 @@
         <!-- LOBBY MAIN MENU -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE VIP</div>
-            <div class="menu-sub">MEGA ARENA EDITION - 8 PLAYER READY</div>
+            <div class="menu-sub">ULTRA JUMBO ARENA EDITION</div>
 
             <div class="main-panel">
                 <div id="network-status">SIAP MAIN (OFFLINE / ONLINE)</div>
@@ -210,9 +210,9 @@
 
                 <div class="section-label">4. PILIH ARENA/MAP:</div>
                 <select id="map-select">
-                    <option value="0">🏛️ MEGA LABIRIN</option>
-                    <option value="1">🏟️ ARENA TERBUKA JUMBO</option>
-                    <option value="2">🏰 BENTENG BESI BERSATU</option>
+                    <option value="0">🏛️ MEGA LABIRIN JUMBO</option>
+                    <option value="1">🏟️ ARENA TERBUKA MONSTER</option>
+                    <option value="2">🏰 BENTENG BESI ULTRA</option>
                 </select>
 
                 <div class="section-label">5. WARNA TANK KAMU:</div>
@@ -395,8 +395,15 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // DIMENSI MEGA ARENA (24 x 24 GRID)
-        const S = 50; const G = 24; const TANK_SIZE = 36;
+        // ==========================================
+        // DIMENSI MEGA JUMBO ARENA (DILEBARKAN DARI 24 BARIS MENJADI 45 GRID)
+        // ==========================================
+        const S = 50; const G = 45; const TANK_SIZE = 36;
+        const MAP_WIDTH = G * S; // 2250 px
+        const MAP_HEIGHT = G * S; // 2250 px
+
+        // POSISI KAMERA DINAMIS
+        let camera = { x: 0, y: 0 };
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let isSpectator = false;
@@ -634,8 +641,8 @@
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     if(r===0 || c===0 || r===G-1 || c===G-1) map[r][c] = 2;
-                    else if(type == 0 && r%4===0 && c%4===0) map[r][c] = 1; 
-                    else if(type == 2 && (r===6 || r===17) && c>4 && c<19) map[r][c] = 2; 
+                    else if(type == 0 && r%5===0 && c%5===0) map[r][c] = 1; 
+                    else if(type == 2 && (r===10 || r===34) && c>6 && c<38) map[r][c] = 2; 
                 }
             }
         }
@@ -664,8 +671,8 @@
         function spawnPowerUp() {
             if(!isHost) return;
             let freeSpots = [];
-            for(let r=2; r<G-2; r++) {
-                for(let c=2; c<G-2; c++) {
+            for(let r=4; r<G-4; r++) {
+                for(let c=4; c<G-4; c++) {
                     if(map[r][c] === 0) freeSpots.push({x: c * S, y: r * S});
                 }
             }
@@ -699,7 +706,7 @@
                     targetX: 0, targetY: 0, targetAngle: 90,
                     color: i === mySlot && !isSpectator ? selectedColor : defaultColors[i % defaultColors.length],
                     hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
-                    spd: (1.2 + (i===mySlot && !isSpectator ? stats.spd*0.2 : 0.2)) * (isBot ? botSpdMulti : 1),
+                    spd: (1.5 + (i===mySlot && !isSpectator ? stats.spd*0.2 : 0.2)) * (isBot ? botSpdMulti : 1),
                     dmg: 35 + (i===mySlot && !isSpectator ? stats.dmg*10 : 0),
                     reload: 380 - (i===mySlot && !isSpectator ? stats.rld*40 : 0),
                     baseWeapon: weaponType, activePowerUp: null, powerUpTimer: 0,
@@ -714,8 +721,8 @@
             generateMap(mapType);
             
             let spawnCoords = [
-                {x:2, y:2, angle:90},   {x:21, y:21, angle:270}, {x:21, y:2, angle:180},  {x:2, y:21, angle:0},
-                {x:11, y:2, angle:90},  {x:11, y:21, angle:270}, {x:2, y:11, angle:0},    {x:21, y:11, angle:180}
+                {x:3, y:3, angle:90},    {x:41, y:41, angle:270}, {x:41, y:3, angle:180},  {x:3, y:41, angle:0},
+                {x:22, y:3, angle:90},   {x:22, y:41, angle:270}, {x:3, y:22, angle:0},    {x:41, y:22, angle:180}
             ];
 
             tanks.forEach((t, i) => {
@@ -922,13 +929,13 @@
             if(powerUps.length > 0 && Math.random() < 0.3) {
                 let p = powerUps[0];
                 let dxP = p.x - centerBotX, dyP = p.y - centerBotY;
-                if(Math.hypot(dxP, dyP) < 200) {
+                if(Math.hypot(dxP, dyP) < 300) {
                     if(Math.abs(dxP) > Math.abs(dyP)) bot.botDir = dxP > 0 ? 0 : 180;
                     else bot.botDir = dyP > 0 ? 90 : 270;
                 }
             }
 
-            let dangerBullet = bullets.find(b => b.id !== bot.id && Math.hypot(b.x - centerBotX, b.y - centerBotY) < 100);
+            let dangerBullet = bullets.find(b => b.id !== bot.id && Math.hypot(b.x - centerBotX, b.y - centerBotY) < 120);
 
             if(dangerBullet && bot.botEvadeTimer <= 0) {
                 let bulletAngle = Math.atan2(dangerBullet.vy, dangerBullet.vx) * 180 / Math.PI;
@@ -942,7 +949,7 @@
 
             let target = targets[0];
             let dx = (target.x + S/2) - centerBotX, dy = (target.y + S/2) - centerBotY;
-            let alignedX = Math.abs(dx) < 35, alignedY = Math.abs(dy) < 35;
+            let alignedX = Math.abs(dx) < 40, alignedY = Math.abs(dy) < 40;
 
             bot.botChangeDirTimer--;
             if(bot.botChangeDirTimer <= 0) {
@@ -965,11 +972,10 @@
                 bot.botDir = (bot.botDir + 90) % 360;
             }
 
-            let arenaWidth = G * S, arenaHeight = G * S;
-            if (bot.x < -TANK_SIZE) bot.x = arenaWidth;
-            else if (bot.x > arenaWidth) bot.x = -TANK_SIZE;
-            if (bot.y < -TANK_SIZE) bot.y = arenaHeight;
-            else if (bot.y > arenaHeight) bot.y = -TANK_SIZE;
+            if (bot.x < -TANK_SIZE) bot.x = MAP_WIDTH;
+            else if (bot.x > MAP_WIDTH) bot.x = -TANK_SIZE;
+            if (bot.y < -TANK_SIZE) bot.y = MAP_HEIGHT;
+            else if (bot.y > MAP_HEIGHT) bot.y = -TANK_SIZE;
 
             if(alignedX || alignedY) {
                 bot.botReactionTimer++;
@@ -1033,7 +1039,7 @@
             powerUpSpawnTimer++;
             if(powerUpSpawnTimer > 180) { 
                 powerUpSpawnTimer = 0;
-                if(powerUps.length < 6) spawnPowerUp();
+                if(powerUps.length < 10) spawnPowerUp();
             }
 
             if(!isSpectator && tanks[mySlot]) {
@@ -1051,11 +1057,10 @@
                         p.y = nextY;
                     }
 
-                    let arenaWidth = G * S, arenaHeight = G * S;
-                    if (p.x < -TANK_SIZE) p.x = arenaWidth;
-                    else if (p.x > arenaWidth) p.x = -TANK_SIZE;
-                    if (p.y < -TANK_SIZE) p.y = arenaHeight;
-                    else if (p.y > arenaHeight) p.y = -TANK_SIZE;
+                    if (p.x < -TANK_SIZE) p.x = MAP_WIDTH;
+                    else if (p.x > MAP_WIDTH) p.x = -TANK_SIZE;
+                    if (p.y < -TANK_SIZE) p.y = MAP_HEIGHT;
+                    else if (p.y > MAP_HEIGHT) p.y = -TANK_SIZE;
 
                     let now = Date.now();
                     if(!isBotMode && (now - lastNetworkSend > 33)) { 
@@ -1064,6 +1069,22 @@
                     }
                 }
             }
+
+            // KAMERA DINAMIS MENGIKUTI PLAYER ATAU JURI
+            if (!isSpectator && tanks[mySlot]) {
+                camera.x = tanks[mySlot].x + S/2 - cvs.width / 2;
+                camera.y = tanks[mySlot].y + S/2 - cvs.height / 2;
+            } else if (isSpectator && spectatorTargetIndex !== -1 && tanks[spectatorTargetIndex]) {
+                camera.x = tanks[spectatorTargetIndex].x + S/2 - cvs.width / 2;
+                camera.y = tanks[spectatorTargetIndex].y + S/2 - cvs.height / 2;
+            } else {
+                camera.x = MAP_WIDTH / 2 - cvs.width / 2;
+                camera.y = MAP_HEIGHT / 2 - cvs.height / 2;
+            }
+
+            // Bounded Camera
+            camera.x = Math.max(0, Math.min(MAP_WIDTH - cvs.width, camera.x));
+            camera.y = Math.max(0, Math.min(MAP_HEIGHT - cvs.height, camera.y));
 
             tanks.forEach(t => { 
                 if(t.isBot) {
@@ -1114,8 +1135,6 @@
                     if(map[gy][gx] === 2) { addBoom(b.x, b.y, '#555', b.isRocket); bullets.splice(i,1); continue; }
                 }
 
-                let arenaWidth = G * S, arenaHeight = G * S;
-
                 tanks.forEach(t => {
                     if(t.alive && t.id !== b.id) {
                         if(Math.hypot(b.x - (t.x+S/2), b.y - (t.y+S/2)) < (TANK_SIZE/2)) {
@@ -1138,7 +1157,7 @@
                         }
                     }
                 });
-                if(b.x<0 || b.y<0 || b.x>arenaWidth || b.y>arenaHeight) bullets.splice(i,1);
+                if(b.x<0 || b.y<0 || b.x>MAP_WIDTH || b.y>MAP_HEIGHT) bullets.splice(i,1);
             }
 
             if(isHost) {
@@ -1160,14 +1179,9 @@
         function draw() {
             ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-            // SKALA KAMERA OTOMATIS TAMPIL FULL DI LAYAR UNTUK ARENA MEGA 24x24
-            let worldWidth = G * S;
-            let worldHeight = G * S;
-            let scale = Math.min(cvs.width / worldWidth, cvs.height / worldHeight);
-
             ctx.save();
-            ctx.translate((cvs.width - worldWidth * scale) / 2, (cvs.height - worldHeight * scale) / 2);
-            ctx.scale(scale, scale);
+            // GESER KANVAS SESUAI POSISI KAMERA
+            ctx.translate(-camera.x, -camera.y);
 
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
