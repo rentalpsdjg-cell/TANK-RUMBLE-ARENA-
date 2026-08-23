@@ -3,78 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE ULTRA HD: FIREBASE EDITION</title>
-    
-    <!-- FIREBASE SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+    <title>TANK RUMBLE VIP ULTRA HD</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: #020205; color: #fff; }
         
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #080a14, #000); }
-        canvas { background: #030408; border: 3px solid #00ffcc; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; }
+        canvas { background: #030408; border: 3px solid #00ffcc; box-shadow: 0 0 35px rgba(0, 255, 204, 0.3); max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; }
 
-        /* HUD ATAS */
-        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 18px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); }
-        .hud-card { background: rgba(10, 12, 20, 0.9); border: 1px solid rgba(0, 255, 204, 0.5); padding: 6px 12px; border-radius: 10px; backdrop-filter: blur(5px); pointer-events: auto; }
-        .hp-bar-bg { width: 130px; height: 10px; background: #111; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; overflow: hidden; margin-top: 4px; }
-        .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
+        /* HUD OVERLAY ATAS */
+        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 18px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent); }
+        
+        /* KOMPONEN KIRI HUD */
+        .hud-left-group { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+        .hud-buttons-row { display: flex; gap: 6px; align-items: center; }
 
-        .btn-hud-action { background: rgba(30,30,40,0.8); color: #ffaa00; border: 1px solid #ffaa00; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer; pointer-events: auto; margin-right: 4px; }
-        .btn-hud-exit { background: rgba(204,0,0,0.8); color: #fff; border: 1px solid #ff0055; }
+        .btn-hud-action { background: rgba(20, 24, 38, 0.9); color: #ffaa00; border: 1.5px solid #ffaa00; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; pointer-events: auto; backdrop-filter: blur(8px); transition: 0.2s; }
+        .btn-hud-action:hover { background: #ffaa00; color: #000; }
+        .btn-hud-exit { background: rgba(180,0,40,0.9); color: #fff; border: 1.5px solid #ff0055; }
 
-        #round-indicator { background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; padding: 6px 16px; border-radius: 14px; font-weight: 900; font-size: 14px; text-align: center; border: 2px solid #fff; }
-
-        /* KOTAK KOMENTATOR DI BAWAH ROUND */
-        #commentator-box { 
-            margin-top: 6px; 
-            background: rgba(8, 8, 14, 0.9); 
-            border: 1px solid #00ffcc; 
-            padding: 5px 10px; 
-            border-radius: 10px; 
-            color: #00ffcc; 
-            font-weight: bold; 
-            font-size: 11px; 
-            text-align: right; 
-            pointer-events: none; 
-            max-width: 220px;
+        /* KOMENTATOR MELAYANG TRANSPARAN DI BAWAH TOMBOL */
+        .commentator-under-buttons {
+            background: rgba(10, 14, 26, 0.75);
+            border: 1px solid #00ffcc;
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: #00ffcc;
+            font-weight: bold;
+            font-size: 11px;
+            text-align: left;
+            pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.25);
+            backdrop-filter: blur(6px);
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        #jury-panel { position: absolute; top: 75px; right: 18px; background: rgba(10, 12, 22, 0.95); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; z-index: 40; display: none; width: 200px; pointer-events: auto; }
-        .jury-title { font-size: 11px; font-weight: 900; color: #00ffff; text-align: center; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
-        .btn-jury { width: 100%; padding: 6px; margin: 3px 0; border-radius: 6px; border: 1px solid #ffaa00; background: #161824; color: #fff; font-weight: bold; font-size: 11px; cursor: pointer; text-align: left; }
+        .hud-card { background: rgba(10, 12, 20, 0.85); border: 1px solid rgba(0, 255, 204, 0.5); padding: 8px 14px; border-radius: 10px; backdrop-filter: blur(8px); pointer-events: auto; }
+        .hp-bar-bg { width: 140px; height: 10px; background: #111; border: 1px solid rgba(255,255,255,0.4); border-radius: 5px; overflow: hidden; margin-top: 4px; }
+        .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
-        /* CONTROLLER HP */
+        #round-indicator { background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; padding: 5px 16px; border-radius: 12px; font-weight: 900; font-size: 13px; text-align: center; border: 1.5px solid #fff; box-shadow: 0 0 15px rgba(0,255,204,0.5); margin-bottom: 6px; }
+
+        /* JURI DASHBOARD */
+        #jury-panel { position: absolute; top: 75px; right: 18px; background: rgba(10, 12, 22, 0.95); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; z-index: 40; display: none; width: 200px; box-shadow: 0 0 20px rgba(0,255,255,0.25); pointer-events: auto; backdrop-filter: blur(8px); }
+        .jury-title { font-size: 11px; font-weight: 900; color: #00ffff; text-align: center; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+        .btn-jury { width: 100%; padding: 6px; margin: 3px 0; border-radius: 6px; border: 1px solid #ffaa00; background: #161824; color: #fff; font-weight: bold; font-size: 10px; cursor: pointer; text-align: left; }
+        .btn-jury:hover { background: #ffaa00; color: #000; }
+
+        /* TOUCH CONTROLS */
         .controls-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; align-items: flex-end; padding: 20px; }
-        .dpad-container { pointer-events: auto; display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 4px; opacity: 0.95; }
-        .btn-ctrl { background: rgba(18, 20, 32, 0.85); border: 2px solid #00ffcc; color: #fff; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; touch-action: manipulation; }
+        .dpad-container { pointer-events: auto; display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 4px; opacity: 0.9; }
+        .btn-ctrl { background: rgba(18, 20, 32, 0.85); border: 2px solid #00ffcc; color: #fff; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; touch-action: manipulation; backdrop-filter: blur(4px); }
         .btn-ctrl:active { background: #00ffcc; color: #000; }
         
         .fire-container { pointer-events: auto; margin-bottom: 5px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .btn-fire-ff { width: 85px; height: 85px; border-radius: 50%; background: radial-gradient(circle, #ff0055, #660011); border: 3px solid #00ffcc; color: #fff; font-size: 15px; font-weight: 900; display: flex; justify-content: center; align-items: center; touch-action: manipulation; }
-        .btn-autofire { background: rgba(15,20,30,0.85); border: 2px solid #00ff66; color: #00ff66; border-radius: 16px; padding: 5px 12px; font-size: 10px; font-weight: bold; }
-        .btn-autofire.active { background: #00ff66; color: #000; }
+        .btn-fire-ff { width: 85px; height: 85px; border-radius: 50%; background: radial-gradient(circle, #ff0055, #660011); border: 3px solid #00ffcc; color: #fff; font-size: 15px; font-weight: 900; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 25px rgba(255,0,85,0.6); touch-action: manipulation; cursor: pointer; }
+        .btn-autofire { background: rgba(15,20,30,0.8); border: 1.5px solid #00ff66; color: #00ff66; border-radius: 18px; padding: 5px 12px; font-size: 10px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px); }
+        .btn-autofire.active { background: #00ff66; color: #000; box-shadow: 0 0 12px #00ff66; }
 
-        .modal-screen { position: absolute; inset: 0; background: rgba(2, 3, 8, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(10px); }
-        .menu-title { font-size: calc(2vw + 22px); font-weight: 900; color: #00ffcc; font-style: italic; margin-bottom: 4px; text-align: center; }
-        .menu-sub { font-size: 11px; color: #ffaa00; letter-spacing: 2px; font-weight: bold; margin-bottom: 16px; text-align: center; }
+        /* LOBBY VIP MODERN STYLE */
+        .modal-screen { position: absolute; inset: 0; background: rgba(2, 3, 8, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(12px); padding: 15px; overflow-y: auto; }
+        .vip-card { background: #070e17; border: 2px solid #ffcc00; border-radius: 18px; padding: 18px; width: 100%; max-width: 420px; box-shadow: 0 0 25px rgba(255, 204, 0, 0.2); display: flex; flex-direction: column; gap: 10px; }
         
-        .room-box { background: rgba(12, 14, 25, 0.9); border: 2px solid #00ffcc; padding: 16px; border-radius: 14px; margin-bottom: 12px; width: 90%; max-width: 360px; text-align: center; }
-        .room-box input, .room-box select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #00ffcc; background: #05060c; color: #00ffcc; font-size: 12px; text-align: center; font-weight: bold; margin-top: 6px; }
+        .header-tools { display: flex; justify-content: space-between; align-items: center; }
+        .btn-wa { background: #10b981; color: #fff; border: none; padding: 8px 14px; border-radius: 18px; font-weight: 900; font-size: 11px; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
+        .btn-full { background: #1d4ed8; color: #fff; border: none; padding: 8px 14px; border-radius: 18px; font-weight: 900; font-size: 11px; cursor: pointer; }
 
-        .role-selector { display: flex; justify-content: space-between; margin-top: 6px; gap: 8px; }
-        .role-btn { flex: 1; padding: 8px; background: #10121d; border: 2px solid #444; color: #aaa; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; }
-        .role-btn.active { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.15); }
+        .title-container { text-align: center; }
+        .menu-title { font-size: 24px; font-weight: 900; color: #ffcc00; letter-spacing: 1px; text-transform: uppercase; }
+        .menu-sub { font-size: 10px; color: #00ffcc; letter-spacing: 2px; font-weight: 800; }
 
-        .btn-ff { width: 80%; max-width: 320px; padding: 10px; margin: 5px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; font-weight: 900; font-size: 13px; cursor: pointer; }
-        .btn-sub { background: #161824; border: 2px solid #ffaa00; color: #ffaa00; }
-        .btn-start { background: linear-gradient(135deg, #ff0055, #ff6600); color: #fff; }
-        .btn-reset { background: linear-gradient(135deg, #cc0000, #ff0055); color: #fff; }
+        .recap-box { background: #030710; border: 1px solid #1e293b; border-radius: 8px; padding: 6px; text-align: center; font-size: 10px; font-weight: bold; color: #ffcc00; }
+        .recap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; }
+        .recap-item { border-radius: 5px; padding: 3px; font-size: 11px; text-align: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.15); }
 
-        .room-code-display { background: #05060c; border: 2px dashed #00ffcc; border-radius: 8px; padding: 8px; margin: 8px 0; font-size: 16px; font-weight: 900; color: #00ffcc; letter-spacing: 2px; }
-        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 10px 0; color: #fff; font-size: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 3px; }
+        .form-label { font-size: 10px; font-weight: 800; color: #ffcc00; text-transform: uppercase; }
+        .form-control { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #1e293b; background: #030710; color: #00ffcc; font-weight: bold; font-size: 12px; text-align: center; outline: none; }
+
+        .btn-main { width: 100%; padding: 10px; border-radius: 12px; border: none; font-weight: 900; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .btn-red { background: linear-gradient(135deg, #ef4444, #991b1b); color: #fff; }
+        .btn-gold { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
+        .btn-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
+
+        .room-code-display { background: #030710; border: 2px dashed #00ffcc; border-radius: 8px; padding: 6px; font-size: 16px; font-weight: 900; color: #00ffcc; text-align: center; letter-spacing: 2px; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 8px 0; color: #fff; font-size: 11px; }
         .leaderboard-table th, .leaderboard-table td { border: 1px solid #333; padding: 6px; text-align: center; }
         .leaderboard-table th { background: #00ffcc; color: #000; }
     </style>
@@ -82,43 +99,49 @@
 <body>
 
     <div id="game-container">
-        <!-- HUD ATAS -->
+        <!-- HUD ATAS PERMAINAN -->
         <div class="hud-layer">
-            <div style="display:flex; gap:6px; align-items:center;">
-                <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">🚪 EXIT</button>
-                <button class="btn-hud-action" onclick="resetOnlineRoom()">🔄 RESTART</button>
-                <button class="btn-hud-action" onclick="toggleFullscreen()">📺 FULL</button>
-                
-                <div class="hud-card" id="my-player-hud">
-                    <div style="color:#00ffcc; font-size:11px; font-weight:bold;" id="player-id-tag">P1 (KAMU)</div>
+            <div class="hud-left-group">
+                <!-- BARISAN TOMBOL -->
+                <div class="hud-buttons-row">
+                    <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">🚪 EXIT</button>
+                    <button class="btn-hud-action" onclick="resetOnlineRoom()">🔄 RESTART</button>
+                    <button class="btn-hud-action" onclick="toggleFullscreen()">📺 FULL</button>
+                </div>
+
+                <!-- KOMENTATOR MELAYANG TEPAT DI BAWAH TOMBOL -->
+                <div id="commentator-box" class="commentator-under-buttons">
+                    🎙️ KOMENTATOR: Menunggu Match...
+                </div>
+
+                <div class="hud-card" id="my-player-hud" style="margin-top:2px;">
+                    <div style="color:#00ffcc; font-size:10px; font-weight:bold;" id="player-id-tag">P1 (KAMU)</div>
                     <div style="font-size:10px; font-weight:900;">KILLS: <span id="p1-kills" style="color:#ffaa00;">0</span> | WEAPON: <span id="p1-weapon" style="color:#00ffcc;">NORMAL</span></div>
-                    <div style="font-size:9px; color:#ffea00;" id="p1-buffs">BUFF: NONE</div>
                     <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
                 </div>
             </div>
 
-            <!-- SUDAH DISESUAIKAN: ROUND & KOMENTATOR TEPAT DI BAWAHNYA -->
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
                 <div id="round-indicator">ROUND 1 / 3</div>
-                <div id="commentator-box">🎙️ KOMENTATOR: Menunggu Match...</div>
-
-                <div class="hud-card" style="text-align:right; margin-top: 5px;">
+                <div class="hud-card" style="text-align:right;">
                     <div style="color:#aaa; font-size:10px; font-weight:bold;">SISA TANK</div>
                     <div id="alive-count" style="font-size:18px; font-weight:900; color:#00ff66;">8</div>
                 </div>
             </div>
         </div>
 
+        <!-- PANEL JURI / WASIT -->
         <div id="jury-panel">
             <div class="jury-title">⚖️ PANEL KONTROL JURI</div>
             <button class="btn-jury" onclick="triggerJuryVoice('Mode AI Bot Agresif!')">🎙️ "AI Agresif"</button>
             <button class="btn-jury" onclick="triggerJuryVoice('Powerup Suplai Diturunkan!')">🎙️ "Suplai Senjata!"</button>
             <button class="btn-jury" onclick="triggerShakeArena()">⚡ Gempa Arena</button>
-            <button class="btn-jury" style="border-color:#ff0055; color:#ff0055; margin-top:6px;" onclick="resetOnlineRoom()">🔄 RESTART MATCH</button>
+            <button class="btn-jury" style="border-color:#ff0055; color:#ff0055; margin-top:6px;" onclick="resetOnlineRoom()">🔄 RESTART MATCH 3 RONDE</button>
         </div>
 
         <canvas id="gameCanvas"></canvas>
 
+        <!-- KONTROL TOUCH PLAYER -->
         <div class="controls-overlay" id="player-controls">
             <div class="dpad-container">
                 <div></div><div class="btn-ctrl" id="btn-u">▲</div><div></div>
@@ -132,79 +155,96 @@
             </div>
         </div>
 
+        <!-- LOBBY VIP STYLE -->
         <div id="menu-screen" class="modal-screen">
-            <div class="menu-title">TANK RUMBLE HD</div>
-            <div class="menu-sub">FIREBASE MULTIPLAYER EDITION</div>
-
-            <div class="room-box">
-                <div style="font-size: 11px; color: #aaa;">PILIH PERAN KAMU:</div>
-                <div class="role-selector">
-                    <button class="role-btn active" id="role-player-btn" onclick="selectRole('player')">🎮 PEMAIN</button>
-                    <button class="role-btn" id="role-jury-btn" onclick="selectRole('jury')">⚖️ JURI / WASIT</button>
+            <div class="vip-card">
+                <div class="header-tools">
+                    <button class="btn-wa" onclick="shareToWhatsApp()">📲 Undang WA</button>
+                    <button class="btn-full" onclick="toggleFullscreen()">📺 Fullscreen</button>
                 </div>
 
-                <div style="font-size: 11px; color: #aaa; margin-top:6px;">PILIH CLASS TANK:</div>
-                <select id="class-select">
-                    <option value="MEDIUM">MEDIUM (BALANCED)</option>
-                    <option value="LIGHT">LIGHT (AGILE & FAST)</option>
-                    <option value="HEAVY">HEAVY (ARMORED)</option>
-                </select>
+                <div class="title-container">
+                    <div class="menu-title">📢 TANK RUMBLE VIP</div>
+                    <div class="menu-sub">OFFICIAL MABAR EDITION</div>
+                </div>
 
-                <div style="font-size: 10px; color: #aaa; margin-top:6px;">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">HUBUNGKAN FIREBASE...</span></div>
-                
-                <button class="btn-ff" style="width:100%; margin-top:8px;" onclick="createRoom()">👑 BUAT ROOM (HOST)</button>
-                
-                <div id="host-info" style="display:none;">
+                <div class="recap-box">
+                    🏆 REKAP KEMENANGAN ROOM
+                    <div class="recap-grid">
+                        <div class="recap-item" style="background:#1e3a8a; color:#60a5fa;">P1: <span id="win-p1">0</span></div>
+                        <div class="recap-item" style="background:#881337; color:#f43f5e;">P2: <span id="win-p2">0</span></div>
+                        <div class="recap-item" style="background:#064e3b; color:#34d399;">P3: <span id="win-p3">0</span></div>
+                        <div class="recap-item" style="background:#78350f; color:#fbbf24;">P4: <span id="win-p4">0</span></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label">NAMA PLAYER:</div>
+                    <input type="text" id="player-name" class="form-control" value="Sultan Tank">
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <div class="form-group" style="flex:1;">
+                        <div class="form-label">TEMA ARENA:</div>
+                        <select id="arena-theme" class="form-control">
+                            <option value="0">✨ VIP Gold</option>
+                            <option value="1">🔥 Cyber Neon</option>
+                            <option value="2">⚔️ Fortress Grid</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <div class="form-label">CLASS TANK:</div>
+                        <select id="class-select" class="form-control">
+                            <option value="MEDIUM">🟢 MEDIUM</option>
+                            <option value="LIGHT">⚡ LIGHT</option>
+                            <option value="HEAVY">🛡️ HEAVY</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">MENYIAPKAN...</span></div>
+                    <button class="btn-main btn-gold" onclick="createRoom()">👑 BUAT ROOM ONLINE (HOST)</button>
+                </div>
+
+                <div id="host-info" style="display:none; flex-direction:column; gap:5px;">
                     <div class="room-code-display" id="room-code-tag">CODE: ----</div>
-                    <div style="font-size:10px; color:#00ffcc; margin-bottom:4px;" id="connected-count">Pemain Terhubung: 1</div>
-                    <button class="btn-ff btn-start" style="width:100%;" onclick="startOnlineMatch()">🚀 MULAI MATCH 3 RONDE</button>
+                    <div style="font-size:10px; color:#00ffcc; text-align:center;" id="connected-count">Pemain Terhubung: 1</div>
+                    <button class="btn-main btn-gold" style="background: linear-gradient(135deg, #10b981, #047857); color:#fff;" onclick="startOnlineMatch()">🚀 MULAI ARENA GAME</button>
                 </div>
 
-                <div style="margin: 6px 0 2px 0; font-weight: bold; font-size:10px;">--- MASUK ROOM TEMAN ---</div>
-                <input type="text" id="join-room-input" placeholder="KODE ROOM (4 DIGIT)" maxlength="4">
-                <button class="btn-ff btn-sub" style="width:100%; margin-top:6px;" onclick="joinRoom()">🎮 MASUK ROOM</button>
+                <div class="form-group">
+                    <input type="text" id="join-room-input" class="form-control" placeholder="KODE ROOM TEMAN (4 DIGIT)" maxlength="4">
+                    <button class="btn-main btn-blue" style="margin-top:4px;" onclick="joinRoom()">🎮 MASUK ROOM TEMAN</button>
+                </div>
+
+                <button class="btn-main btn-red" onclick="resetOnlineRoom()">💥 RESET ROOM ONLINE</button>
+                <button class="btn-main btn-blue" style="background:#334155;" onclick="selectAsJury()">👁️ PENONTON / JURI</button>
             </div>
-            
-            <button class="btn-ff btn-sub" onclick="toggleFullscreen()">📺 FULLSCREEN MODE</button>
         </div>
 
+        <!-- POP-UP WINNER -->
         <div id="win-screen" class="modal-screen" style="display:none;">
             <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
             <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH 3 RONDE</div>
             
-            <div style="width: 90%; max-width: 380px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+            <div style="width: 90%; max-width: 400px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 10px; padding: 10px; margin-bottom: 10px; box-shadow: 0 0 25px rgba(0,255,204,0.4);">
                 <table class="leaderboard-table">
                     <thead>
                         <tr><th>Peringkat</th><th>Tank</th><th>Kills</th><th>Skor</th></tr>
                     </thead>
-                    <tbody id="leaderboard-body"></tbody>
+                    <tbody id="leaderboard-body">
+                    </tbody>
                 </table>
             </div>
             
-            <button class="btn-ff btn-reset" onclick="resetOnlineRoom()">🔄 MAIN LAGI (3 RONDE)</button>
-            <button class="btn-ff btn-sub" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
+            <button class="btn-main btn-red" style="width: 80%; max-width: 320px; margin-bottom:6px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI (3 RONDE)</button>
+            <button class="btn-main btn-blue" style="width: 80%; max-width: 320px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
-        };
-
-        try {
-            firebase.initializeApp(firebaseConfig);
-            document.getElementById('peer-status').innerText = "FIREBASE SIAP!";
-        } catch(e) {
-            document.getElementById('peer-status').innerText = "MASUKKAN CONFIG FIREBASE!";
-        }
-
-        const db = firebase.database();
+        // AUDIO SYNTHESIZER
         const actx = new (window.AudioContext || window.webkitAudioContext)();
         
         function playSound(type) {
@@ -214,21 +254,46 @@
             if(type === 'shoot') {
                 let osc = actx.createOscillator(), gain = actx.createGain();
                 osc.type = 'triangle'; 
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(30, now + 0.1);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
                 osc.connect(gain); gain.connect(actx.destination);
-                osc.start(); osc.stop(now + 0.1);
-            } else if(type === 'boom') {
+                osc.start(); osc.stop(now + 0.15);
+            } 
+            else if(type === 'plasma') {
                 let osc = actx.createOscillator(), gain = actx.createGain();
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(120, now);
-                osc.frequency.exponentialRampToValueAtTime(20, now + 0.2);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.frequency.setValueAtTime(900, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                 osc.connect(gain); gain.connect(actx.destination);
-                osc.start(); osc.stop(now + 0.2);
+                osc.start(); osc.stop(now + 0.1);
+            }
+            else if(type === 'heavy') {
+                let osc = actx.createOscillator(), gain = actx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain); gain.connect(actx.destination);
+                osc.start(); osc.stop(now + 0.3);
+            }
+            else if(type === 'boom') {
+                let bufSize = actx.sampleRate * 0.4, buffer = actx.createBuffer(1, bufSize, actx.sampleRate), data = buffer.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+                let noise = actx.createBufferSource(); noise.buffer = buffer;
+                let filter = actx.createBiquadFilter(); 
+                filter.type = 'lowpass'; 
+                filter.frequency.setValueAtTime(500, now);
+                filter.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+                let g = actx.createGain(); 
+                g.gain.setValueAtTime(0.6, now); 
+                g.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                noise.connect(filter); filter.connect(g); g.connect(actx.destination); 
+                noise.start();
             }
         }
 
@@ -251,14 +316,13 @@
             }
         }
 
-        // CANVAS HP OPTIMIZED
+        // CANVAS SETUP
         const cvs = document.getElementById('gameCanvas');
-        const ctx = cvs.getContext('2d', { alpha: false }); // Alpha false meningkatkan FPS di HP
-        const INTERNAL_RES = 1000;
+        const ctx = cvs.getContext('2d');
+        const INTERNAL_RES = 1200;
         
         function resizeCanvas() {
-            // Membatasi pixel ratio max 1.5 agar HP tidak ngelag
-            const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
             cvs.width = INTERNAL_RES * dpr;
             cvs.height = INTERNAL_RES * dpr;
             ctx.scale(dpr, dpr);
@@ -266,10 +330,16 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        let selectedRole = 'player', mySlot = 0, isHost = false, currentRoomCode = "";
-        let isAutoFireActive = false, roomRef = null;
+        let selectedRole = 'player';
+        let peer = null, mySlot = 0, isHost = false;
+        let connections = [];
+        let hostConn = null;
+        let isAutoFireActive = false;
+        let currentRoomCode = "";
+        const PREFIX = "TR8-";
+
         let currentRound = 1;
-        const TOTAL_ROUNDS = 3, roundMaps = [0, 1, 2];
+        const TOTAL_ROUNDS = 3;
 
         function toggleAutoFire() {
             isAutoFireActive = !isAutoFireActive;
@@ -278,86 +348,72 @@
             btn.innerText = isAutoFireActive ? "🔥 AUTO FIRE: ON" : "🔥 AUTO FIRE: OFF";
         }
 
-        function selectRole(role) {
-            selectedRole = role;
-            document.getElementById('role-player-btn').classList.toggle('active', role === 'player');
-            document.getElementById('role-jury-btn').classList.toggle('active', role === 'jury');
+        function selectAsJury() {
+            selectedRole = 'jury';
+            alert("Kamu memilih mode Penonton / Juri!");
         }
 
+        function initPeer() {
+            peer = new Peer(null, {
+                host: '0.peerjs.com', port: 443, path: '/', secure: true
+            });
+            peer.on('open', id => { document.getElementById('peer-status').innerText = "SIAP MABAR!"; });
+            peer.on('error', err => { document.getElementById('peer-status').innerText = "ERROR KONEKSI"; });
+        }
+        initPeer();
+
         function createRoom() {
-            let roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            currentRoomCode = roomCode;
-            isHost = true; mySlot = 0;
+            currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
+            let fullId = PREFIX + currentRoomCode;
+            if(peer) peer.destroy();
+            
+            peer = new Peer(fullId, { host: '0.peerjs.com', port: 443, path: '/', secure: true });
 
-            roomRef = db.ref('rooms/' + roomCode);
-            roomRef.set({ status: 'waiting', currentRound: 1, playersCount: 1, events: { type: 'NONE' } });
-            roomRef.onDisconnect().remove();
-
-            db.ref(`rooms/${roomCode}/players`).on('value', snapshot => {
-                let players = snapshot.val();
-                let count = players ? Object.keys(players).length : 1;
-                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count}`;
+            peer.on('open', id => {
+                isHost = true; mySlot = 0;
+                document.getElementById('host-info').style.display = 'flex';
+                document.getElementById('room-code-tag').innerText = "CODE: " + currentRoomCode;
+                speakIndo(`Room dibuat! Kode ${currentRoomCode}.`);
             });
 
-            setupRoomListeners();
-            document.getElementById('host-info').style.display = 'block';
-            document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
-            speakIndo(`Room dibuat! Kode ${roomCode}.`);
+            peer.on('connection', conn => {
+                if(connections.length >= 7) return; 
+                connections.push(conn);
+                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${connections.length + 1}`;
+                let assignedSlot = connections.length;
+                conn.on('open', () => {
+                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, isJury: conn.metadata ? conn.metadata.isJury : false });
+                });
+                conn.on('data', data => handleData(data));
+            });
         }
 
         function joinRoom() {
             let code = document.getElementById('join-room-input').value.trim().toUpperCase();
             if(!code) return alert("Masukkan Kode Room!");
-            currentRoomCode = code; isHost = false;
-
-            roomRef = db.ref('rooms/' + code);
-            roomRef.once('value', snapshot => {
-                if(!snapshot.exists()) return alert("Room tidak ditemukan!");
-
-                db.ref(`rooms/${code}/players`).once('value', pSnap => {
-                    let players = pSnap.val() || {};
-                    let occupiedSlots = Object.keys(players);
-                    
-                    for(let i=1; i<8; i++) {
-                        if(!occupiedSlots.includes(i.toString())) { mySlot = i; break; }
-                    }
-
-                    db.ref(`rooms/${code}/players/${mySlot}`).set({ role: selectedRole, active: true });
-                    db.ref(`rooms/${code}/players/${mySlot}`).onDisconnect().remove();
-
-                    if(selectedRole === 'player') document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
-
-                    setupRoomListeners();
-                    speakIndo("Masuk ke Room " + code);
-                });
-            });
+            currentRoomCode = code;
+            let fullId = PREFIX + code; isHost = false;
+            if(!peer) peer = new Peer();
+            hostConn = peer.connect(fullId, { metadata: { isJury: (selectedRole === 'jury') } });
+            hostConn.on('open', () => { speakIndo("Terhubung ke Host!"); });
+            hostConn.on('data', data => handleData(data));
         }
 
-        function setupRoomListeners() {
-            roomRef.child('events').on('value', snapshot => {
-                let data = snapshot.val();
-                if(data) handleData(data);
-            });
-
-            roomRef.child('positions').on('child_changed', snapshot => {
-                let data = snapshot.val();
-                if(data && data.slot !== mySlot && tanks[data.slot]) {
-                    tanks[data.slot].x = data.x;
-                    tanks[data.slot].y = data.y;
-                    tanks[data.slot].angle = data.angle;
-                    tanks[data.slot].weapon = data.weapon || tanks[data.slot].weapon;
-                }
-            });
+        function shareToWhatsApp() {
+            if(!currentRoomCode) return alert("Buat Room atau Masuk Room terlebih dahulu!");
+            let joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
+            let message = `Yuk mabar TANK RUMBLE VIP online bareng gue! Klik link:\n${joinUrl}`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
         }
 
-        function broadcast(data) {
-            if(!roomRef) return;
-            if(data.type === 'SYNC_POS') {
-                db.ref(`rooms/${currentRoomCode}/positions/${data.slot}`).set(data);
-            } else {
-                roomRef.child('events').set(data);
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                document.getElementById('join-room-input').value = roomParam;
+                setTimeout(() => { joinRoom(); }, 1200);
             }
-        }
+        });
 
         function startOnlineMatch() {
             if(!isHost) return;
@@ -366,24 +422,53 @@
             initFullMatch();
         }
 
-        function triggerJuryVoice(text) { broadcast({ type: 'JURY_VOICE', text: text }); speakIndo(text); }
-        function triggerShakeArena() { broadcast({ type: 'SHAKE' }); shakeScreen(); }
-        let shakeTime = 0; function shakeScreen() { shakeTime = 4; }
+        function broadcast(data) {
+            if(isHost) connections.forEach(c => c.send(data));
+            else if(hostConn) hostConn.send(data);
+        }
+
+        function triggerJuryVoice(text) {
+            broadcast({ type: 'JURY_VOICE', text: text });
+            speakIndo(text);
+        }
+
+        function triggerShakeArena() {
+            broadcast({ type: 'SHAKE' });
+            shakeScreen();
+        }
+
+        let shakeTime = 0;
+        function shakeScreen() { shakeTime = 5; }
 
         function handleData(data) {
-            if(data.type === 'START_MATCH') { currentRound = data.round || 1; initFullMatch(); }
-            else if(data.type === 'NEXT_ROUND') { currentRound = data.round; startNextRound(); }
-            else if(data.type === 'FIRE') { if(tanks[data.slot] && data.slot !== mySlot) fire(tanks[data.slot], false); }
-            else if(data.type === 'JURY_VOICE') { speakIndo(data.text); }
-            else if(data.type === 'SHAKE') { shakeScreen(); }
-            else if(data.type === 'RESET_ROOM') {
+            if(data.type === 'INIT_SLOT') {
+                mySlot = data.slot;
+                if(selectedRole === 'player') document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
+            } else if(data.type === 'START_MATCH') {
+                currentRound = data.round || 1; initFullMatch();
+            } else if(data.type === 'NEXT_ROUND') {
+                currentRound = data.round; startNextRound();
+            } else if(data.type === 'SYNC_POS') {
+                if(tanks[data.slot]) {
+                    tanks[data.slot].x = data.x;
+                    tanks[data.slot].y = data.y;
+                    tanks[data.slot].angle = data.angle;
+                    tanks[data.slot].weapon = data.weapon || tanks[data.slot].weapon;
+                }
+            } else if(data.type === 'FIRE') {
+                if(tanks[data.slot]) fire(tanks[data.slot], false);
+            } else if(data.type === 'JURY_VOICE') {
+                speakIndo(data.text);
+            } else if(data.type === 'SHAKE') {
+                shakeScreen();
+            } else if(data.type === 'RESET_ROOM') {
                 currentRound = 1; initFullMatch();
                 document.getElementById('win-screen').style.display = 'none';
                 speakIndo("Match di-reset!");
             }
         }
 
-        const S = 62.5, G = 16;
+        const S = 75, G = 16;
         let map = [];
 
         function generateMap(type) {
@@ -401,18 +486,22 @@
                 for(let r=2; r<G-2; r+=2) {
                     for(let c=2; c<G-2; c++) {
                         if((r+c)%3 === 0) map[r][c] = 1;
-                        else if((r+c)%5 === 0) map[r][c] = 3;
+                        else if((r+c)%5 === 0) map[r][c] = 2;
                     }
                 }
             } else if(type == 2) { 
                 for(let i=3; i<13; i++) {
-                    if(i!==7 && i!==8) { map[i][7] = 1; map[i][8] = 1; map[7][i] = 1; map[8][i] = 1; }
+                    if(i!==7 && i!==8) {
+                        map[i][7] = 1; map[i][8] = 1; map[7][i] = 1; map[8][i] = 1;
+                    }
                 }
             }
         }
 
         let tanks = [], bullets = [], particles = [], powerups = [];
-        let isGameOver = false, powerupInterval = null;
+        let isGameOver = false;
+        let powerupInterval = null;
+
         const defaultColors = ['#00ffcc', '#ff0055', '#cc00ff', '#00ff66', '#ffaa00', '#ff00ff', '#ffff00', '#0099ff'];
 
         function getClassStats(cType) {
@@ -421,21 +510,32 @@
             return { hp: 200, accel: 0.22, maxSpeed: 2.3, friction: 0.86 };
         }
 
+        function getWeaponColor(weapon, baseColor) {
+            if(weapon === 'PLASMA') return '#00ffff';
+            if(weapon === 'HEAVY_CANNON') return '#ff3300';
+            if(weapon === 'SPREAD_NUKE') return '#ff00ff';
+            return baseColor;
+        }
+
         function initFullMatch() {
             currentRound = 1;
+            let activeHumanCount = isHost ? (connections.length + 1) : 1;
             let chosenClass = document.getElementById('class-select').value;
 
             tanks = [];
             for(let i=0; i<8; i++) {
-                let isBot = (i !== mySlot && !isHost);
+                let isBot = (i >= activeHumanCount);
                 let cStats = getClassStats(isBot ? 'MEDIUM' : chosenClass);
 
                 tanks.push({
-                    id: i+1, x: 0, y: 0, vx: 0, vy: 0, angle: 90, targetAngle: 90,
+                    id: i+1, x: 0, y: 0, vx: 0, vy: 0,
+                    angle: 90, targetAngle: 90,
                     baseColor: defaultColors[i], color: defaultColors[i],
-                    hp: cStats.hp, maxHp: cStats.hp, accel: cStats.accel, maxSpeed: cStats.maxSpeed, friction: cStats.friction,
-                    kills: 0, score: 0, alive: true, weapon: 'NORMAL', weaponTimer: 0,
-                    shieldTimer: 0, speedTimer: 0, streak: 0, inBush: false,
+                    hp: cStats.hp, maxHp: cStats.hp,
+                    accel: cStats.accel, maxSpeed: cStats.maxSpeed, friction: cStats.friction,
+                    kills: 0, score: 0, alive: true,
+                    weapon: 'NORMAL', weaponTimer: 0,
+                    shieldTimer: 0, speedTimer: 0,
                     isBot: isBot, lastBotMove: 0, lastBotFire: 0
                 });
             }
@@ -443,7 +543,9 @@
         }
 
         function startNextRound() {
-            generateMap(roundMaps[(currentRound - 1) % roundMaps.length]);
+            let mapTheme = parseInt(document.getElementById('arena-theme').value) || 0;
+            generateMap(mapTheme);
+
             let spawnCoords = [
                 {x:1,y:1, angle:90}, {x:14,y:14, angle:270}, {x:14,y:1, angle:180}, {x:1,y:14, angle:0},
                 {x:7,y:1, angle:90}, {x:7,y:14, angle:270}, {x:1,y:7, angle:0}, {x:14,y:7, angle:180}
@@ -451,12 +553,15 @@
 
             tanks.forEach((t, i) => {
                 t.x = spawnCoords[i].x * S; t.y = spawnCoords[i].y * S;
-                t.vx = 0; t.vy = 0; t.angle = spawnCoords[i].angle; t.targetAngle = spawnCoords[i].angle;
-                t.hp = t.maxHp; t.alive = true; t.weapon = 'NORMAL'; t.weaponTimer = 0;
-                t.shieldTimer = 0; t.speedTimer = 0; t.streak = 0;
+                t.vx = 0; t.vy = 0;
+                t.angle = spawnCoords[i].angle; t.targetAngle = spawnCoords[i].angle;
+                t.hp = t.maxHp; t.alive = true;
+                t.weapon = 'NORMAL'; t.weaponTimer = 0;
+                t.shieldTimer = 0; t.speedTimer = 0;
             });
 
-            bullets = []; particles = []; powerups = []; isGameOver = false;
+            bullets = []; particles = []; powerups = [];
+            isGameOver = false;
 
             document.getElementById('round-indicator').innerText = `ROUND ${currentRound} / ${TOTAL_ROUNDS}`;
             document.getElementById('menu-screen').style.display = 'none';
@@ -470,12 +575,13 @@
                 document.getElementById('my-player-hud').style.display = 'block';
                 document.getElementById('player-controls').style.display = 'flex';
                 document.getElementById('jury-panel').style.display = 'none';
+                document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
             }
 
-            speakIndo(`Ronde ${currentRound} dimulai!`);
+            speakIndo(`Ronde ${currentRound} dimulai! Selamat bertanding!`);
 
             if(powerupInterval) clearInterval(powerupInterval);
-            powerupInterval = setInterval(() => { if(!isGameOver) spawnPowerup(); }, 7000);
+            powerupInterval = setInterval(() => { if(!isGameOver) spawnPowerup(); }, 6000);
 
             requestAnimationFrame(loop);
         }
@@ -490,7 +596,8 @@
             const release = (e) => { e.preventDefault(); keys[keyName] = false; };
             el.addEventListener('touchstart', press, {passive: false});
             el.addEventListener('touchend', release, {passive: false});
-            el.addEventListener('mousedown', press); el.addEventListener('mouseup', release);
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
         }
 
         bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
@@ -498,11 +605,15 @@
         bindTouch('btn-f', ' ');
 
         function spawnPowerup() {
-            if(powerups.length >= 3) return;
-            let rx = Math.floor(Math.random() * 12) + 2, ry = Math.floor(Math.random() * 12) + 2;
+            if(powerups.length >= 4) return;
+            let rx = Math.floor(Math.random() * 12) + 2;
+            let ry = Math.floor(Math.random() * 12) + 2;
             if(map[ry][rx] === 0) {
-                let types = ['PLASMA', 'HEAVY_CANNON', 'SHIELD', 'MEDKIT', 'SPEED'];
-                powerups.push({ x: rx * S + S/2, y: ry * S + S/2, type: types[Math.floor(Math.random()*types.length)] });
+                let types = ['PLASMA', 'HEAVY_CANNON', 'SPREAD_NUKE', 'SHIELD', 'MEDKIT', 'SPEED'];
+                powerups.push({
+                    x: rx * S + S/2, y: ry * S + S/2,
+                    type: types[Math.floor(Math.random()*types.length)], floatOffset: Math.random() * 10
+                });
             }
         }
 
@@ -511,42 +622,54 @@
             if(powerupInterval) clearInterval(powerupInterval);
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('menu-screen').style.display = 'flex';
+            speakIndo("Kembali ke Lobby Utama.");
         }
 
         function resetOnlineRoom() {
             initFullMatch();
             broadcast({ type: 'RESET_ROOM' });
+            speakIndo("Match di-reset!");
         }
 
         function fire(t, isLocal = true) {
             if(!t.alive || isGameOver) return;
             let now = Date.now();
-            let cooldown = t.weapon === 'PLASMA' ? 180 : (t.weapon === 'HEAVY_CANNON' ? 500 : 320);
+            let cooldown = t.weapon === 'PLASMA' ? 160 : (t.weapon === 'HEAVY_CANNON' ? 520 : 320);
             if(t.lastF && now - t.lastF < cooldown) return;
             t.lastF = now;
 
+            let wColor = getWeaponColor(t.weapon, t.baseColor);
             let rad = t.angle * Math.PI / 180;
-            let spawnX = t.x + S/2 + Math.cos(rad) * (S/2);
-            let spawnY = t.y + S/2 + Math.sin(rad) * (S/2);
+            let spawnX = t.x + S/2 + Math.cos(rad) * (S/2 + 5);
+            let spawnY = t.y + S/2 + Math.sin(rad) * (S/2 + 5);
 
-            playSound('shoot');
-            bullets.push({ 
-                x: spawnX, y: spawnY, 
-                vx: Math.cos(rad) * 16, vy: Math.sin(rad) * 16,
-                id: t.id, c: t.color, dmg: 35, rad: 5
-            });
+            if(t.weapon === 'SPREAD_NUKE') {
+                playSound('heavy');
+                let spread = [0, -0.3, 0.3, -0.5, 0.5];
+                spread.forEach(offset => {
+                    bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad + offset) * 15, vy: Math.sin(rad + offset) * 15, id: t.id, c: wColor, dmg: 45, rad: 6 });
+                });
+            } else if(t.weapon === 'PLASMA') {
+                playSound('plasma');
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 22, vy: Math.sin(rad) * 22, id: t.id, c: wColor, dmg: 55, rad: 5 });
+            } else if(t.weapon === 'HEAVY_CANNON') {
+                playSound('heavy');
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 12, vy: Math.sin(rad) * 12, id: t.id, c: wColor, dmg: 100, rad: 10, isHeavy: true });
+            } else {
+                playSound('shoot');
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 15, vy: Math.sin(rad) * 15, id: t.id, c: wColor, dmg: 35, rad: 5 });
+            }
 
-            if(isLocal && selectedRole === 'player') broadcast({ type: 'FIRE', slot: mySlot });
+            if(isLocal && selectedRole === 'player' && !t.isBot) broadcast({ type: 'FIRE', slot: mySlot });
         }
 
-        function addBoom(x, y, color) {
-            playSound('boom');
-            // Dibatasi hanya 8 partikel agar HP tetap cepat
-            for(let i=0; i<8; i++) {
+        function addBoom(x, y, color, sizeMultiplier = 1) {
+            playSound('boom'); shakeScreen();
+            let pCount = Math.floor(18 * sizeMultiplier);
+            for(let i=0; i<pCount; i++) {
                 particles.push({
-                    x: x, y: y, 
-                    vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8,
-                    size: Math.random()*4+2, c: color, life: 0.6
+                    x: x, y: y, vx: (Math.random()-0.5)*(10*sizeMultiplier), vy: (Math.random()-0.5)*(10*sizeMultiplier),
+                    size: Math.random()*6+3, c: color, life: 1
                 });
             }
         }
@@ -557,18 +680,25 @@
             let targets = tanks.filter(t => t.alive && t.id !== bot.id);
             if(targets.length === 0) return;
 
-            if(now - bot.lastBotMove > 700) {
+            if(now - bot.lastBotMove > 650) {
                 bot.lastBotMove = now;
                 let closest = targets[0];
+                let minDist = Math.hypot(closest.x - bot.x, closest.y - bot.y);
+                targets.forEach(t => {
+                    let d = Math.hypot(t.x - bot.x, t.y - bot.y);
+                    if(d < minDist) { minDist = d; closest = t; }
+                });
+
                 let dx = closest.x - bot.x, dy = closest.y - bot.y;
                 if(Math.abs(dx) > Math.abs(dy)) bot.targetAngle = dx > 0 ? 0 : 180;
                 else bot.targetAngle = dy > 0 ? 90 : 270;
             }
 
             let rad = bot.angle * Math.PI / 180;
-            bot.vx += Math.cos(rad) * bot.accel; bot.vy += Math.sin(rad) * bot.accel;
+            bot.vx += Math.cos(rad) * bot.accel;
+            bot.vy += Math.sin(rad) * bot.accel;
 
-            if(now - bot.lastBotFire > 1200) {
+            if(now - bot.lastBotFire > 1000) {
                 bot.lastBotFire = now;
                 fire(bot, false);
             }
@@ -576,7 +706,11 @@
 
         function handleRoundEnd(roundWinner) {
             isGameOver = true;
-            if(roundWinner) roundWinner.score += 200;
+            if(roundWinner) {
+                roundWinner.score += 200;
+                let winElem = document.getElementById(`win-p${roundWinner.id}`);
+                if(winElem) winElem.innerText = parseInt(winElem.innerText) + 1;
+            }
 
             if(currentRound < TOTAL_ROUNDS) {
                 speakIndo(`Ronde ${currentRound} Selesai! Lanjut Ronde ${currentRound+1}!`);
@@ -584,11 +718,18 @@
                     currentRound++;
                     if(isHost) broadcast({ type: 'NEXT_ROUND', round: currentRound });
                     startNextRound();
-                }, 3000);
+                }, 3500);
             } else {
-                speakIndo("PERTANDINGAN SELESAI!");
-                setTimeout(() => { showFinalLeaderboard(); }, 1000);
+                speakIndo("MATCH 3 RONDE SELESAI!");
+                setTimeout(() => { showFinalLeaderboard(); }, 1200);
             }
+        }
+
+        function lerpAngle(a, b, step) {
+            let diff = (b - a) % 360;
+            if (diff < -180) diff += 360;
+            if (diff > 180) diff -= 360;
+            return a + diff * step;
         }
 
         function update() {
@@ -596,8 +737,9 @@
 
             if(selectedRole === 'player') {
                 let p = tanks[mySlot];
-                if(p && p.alive) {
-                    let ax = 0, ay = 0, hasInput = false;
+                if(p && p.alive && !p.isBot) {
+                    let ax = 0, ay = 0;
+                    let hasInput = false;
 
                     if(keys['ArrowUp'] || keys['w']) { ay -= p.accel; p.targetAngle = 270; hasInput = true; }
                     else if(keys['ArrowDown'] || keys['s']) { ay += p.accel; p.targetAngle = 90; hasInput = true; }
@@ -608,26 +750,46 @@
                     if(keys[' '] || isAutoFireActive) fire(p, true);
 
                     p.vx += ax; p.vy += ay;
-                    if(hasInput) broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.targetAngle, weapon: p.weapon });
+
+                    if(hasInput) {
+                        broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.targetAngle, weapon: p.weapon });
+                    }
                 }
             }
 
             tanks.forEach(t => {
                 if(t.isBot) updateAI(t);
+                t.angle = lerpAngle(t.angle, t.targetAngle, 0.22);
 
-                t.angle = t.targetAngle;
+                let curMaxSpd = t.speedTimer > 0 ? t.maxSpeed * 1.35 : t.maxSpeed;
                 t.vx *= t.friction; t.vy *= t.friction;
 
-                let nextX = t.x + t.vx, nextY = t.y + t.vy;
-                let tx = Math.floor((nextX+S/2)/S), ty = Math.floor((nextY+S/2)/S);
+                let currentSpd = Math.hypot(t.vx, t.vy);
+                if(currentSpd > curMaxSpd) {
+                    t.vx = (t.vx / currentSpd) * curMaxSpd;
+                    t.vy = (t.vy / currentSpd) * curMaxSpd;
+                }
 
-                if(map[ty] && (map[ty][tx] === 1 || map[ty][tx] === 2)) {
-                    t.vx *= -0.3; t.vy *= -0.3;
+                let nextX = t.x + t.vx; let nextY = t.y + t.vy;
+                let tx1 = Math.floor((nextX+8)/S), ty1 = Math.floor((nextY+8)/S);
+                let tx2 = Math.floor((nextX+S-8)/S), ty2 = Math.floor((nextY+S-8)/S);
+
+                if(map[ty1] && map[ty1][tx1] === 1 || map[ty1][tx1] === 2 || map[ty2][tx1] === 1 || map[ty2][tx1] === 2 ||
+                   map[ty1][tx2] === 1 || map[ty1][tx2] === 2 || map[ty2][tx2] === 1 || map[ty2][tx2] === 2) {
+                    t.vx *= -0.4; t.vy *= -0.4;
                 } else {
                     t.x = nextX; t.y = nextY;
                 }
 
-                if(t.weaponTimer > 0) { t.weaponTimer--; if(t.weaponTimer <= 0) t.weapon = 'NORMAL'; }
+                t.x = Math.max(S, Math.min((G-2)*S, t.x));
+                t.y = Math.max(S, Math.min((G-2)*S, t.y));
+
+                if(t.weaponTimer > 0) { 
+                    t.weaponTimer--; 
+                    if(t.weaponTimer <= 0) t.weapon = 'NORMAL'; 
+                }
+                t.color = getWeaponColor(t.weapon, t.baseColor);
+
                 if(t.shieldTimer > 0) t.shieldTimer--;
                 if(t.speedTimer > 0) t.speedTimer--;
 
@@ -635,36 +797,45 @@
                     for(let i=powerups.length-1; i>=0; i--) {
                         let pw = powerups[i];
                         if(Math.hypot((t.x+S/2)-pw.x, (t.y+S/2)-pw.y) < S/2) {
-                            if(pw.type === 'SHIELD') t.shieldTimer = 300;
-                            else if(pw.type === 'MEDKIT') t.hp = Math.min(t.maxHp, t.hp + 80);
-                            else { t.weapon = pw.type; t.weaponTimer = 350; }
-                            speakIndo(`P${t.id} ambil ${pw.type}!`);
+                            if(pw.type === 'SHIELD') t.shieldTimer = 350;
+                            else if(pw.type === 'MEDKIT') t.hp = Math.min(t.maxHp, t.hp + 100);
+                            else if(pw.type === 'SPEED') t.speedTimer = 350;
+                            else { t.weapon = pw.type; t.weaponTimer = 400; }
+                            speakIndo(`Tank ${t.id} mengambil ${pw.type}!`);
                             powerups.splice(i,1);
                         }
                     }
                 }
             });
 
-            // BULLET LOGIC
+            // BULLETS
             for(let i=bullets.length-1; i>=0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
 
                 let gx = Math.floor(b.x/S), gy = Math.floor(b.y/S);
                 if(gy>=0 && gy<G && gx>=0 && gx<G) {
-                    if(map[gy][gx] === 1) { addBoom(b.x, b.y, '#ffaa00'); map[gy][gx]=0; bullets.splice(i,1); continue; }
-                    if(map[gy][gx] === 2) { bullets.splice(i,1); continue; }
+                    if(map[gy][gx] === 1) { 
+                        addBoom(b.x, b.y, '#ffaa00', b.isHeavy ? 2 : 1); 
+                        map[gy][gx]=0; bullets.splice(i,1); continue; 
+                    }
+                    if(map[gy][gx] === 2) { 
+                        addBoom(b.x, b.y, '#555', 1); bullets.splice(i,1); continue; 
+                    }
                 }
 
                 tanks.forEach(t => {
                     if(t.alive && t.id !== b.id) {
                         if(Math.hypot(b.x - (t.x+S/2), b.y - (t.y+S/2)) < S/2) {
-                            if(t.shieldTimer <= 0) t.hp -= b.dmg;
-                            addBoom(t.x+S/2, t.y+S/2, t.color);
+                            if(t.shieldTimer <= 0) {
+                                t.hp -= b.dmg;
+                                addBoom(t.x+S/2, t.y+S/2, t.color, b.isHeavy ? 2 : 1);
+                            }
                             bullets.splice(i,1);
 
                             if(t.hp <= 0 && t.alive) {
                                 t.alive = false;
+                                addBoom(t.x+S/2, t.y+S/2, '#ff0055', 2.5);
                                 let killer = tanks.find(k => k.id === b.id);
                                 if(killer) { killer.kills++; killer.score += 100; }
                                 speakIndo(`Tank ${t.id} hancur!`);
@@ -675,7 +846,7 @@
                         }
                     }
                 });
-                if(b.x<0 || b.y<0 || b.x>INTERNAL_RES || b.y>INTERNAL_RES) bullets.splice(i,1);
+                if(b.x<0 || b.y<0 || b.x>1200 || b.y>1200) bullets.splice(i,1);
             }
 
             if(selectedRole === 'player' && tanks[mySlot]) {
@@ -693,8 +864,8 @@
             let champ = sortedTanks[0];
 
             document.getElementById('win-title').innerText = "GRAND CHAMPION!";
-            document.getElementById('win-sub').innerText = `JUARA MATCH: TANK ${champ.id}`;
-            speakIndo(`Selamat Tank ${champ.id} Juara Umum!`);
+            document.getElementById('win-sub').innerText = `JUARA MATCH 3 RONDE: TANK ${champ.id}`;
+            speakIndo(`SELAMAT UNTUK Tank ${champ.id}! JUARA UMUM!`);
 
             let tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = '';
@@ -702,75 +873,98 @@
             sortedTanks.forEach((t, index) => {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>#${index+1}</td>
-                    <td style="color:${t.color}; font-weight:bold;">Tank ${t.id}</td>
+                    <td>#${index+1} ${index===0 ? '🏆' : ''}</td>
+                    <td style="color:${t.color}; font-weight:bold;">Tank ${t.id} ${t.isBot ? '(BOT)' : ''}</td>
                     <td>${t.kills}</td>
-                    <td style="color:#ffaa00; font-weight:bold;">${t.score}</td>
+                    <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // RENDER ENGINE SUPER RINGAN
         function drawTank(t) {
             if(!t.alive) return;
-
             ctx.save();
             ctx.translate(t.x + S/2, t.y + S/2);
+
+            if(t.shieldTimer > 0) {
+                ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(0, 0, S/2 + 6, 0, Math.PI*2); ctx.stroke();
+            }
+
             ctx.rotate(t.angle * Math.PI / 180);
 
-            // Bodi Tank
-            ctx.fillStyle = t.color;
-            ctx.fillRect(-S/2+6, -S/2+6, S-12, S-12);
+            ctx.fillStyle = '#0a0d14';
+            ctx.fillRect(-S/2+4, -S/2+2, 16, S-4); 
+            ctx.fillRect(S/2-20, -S/2+2, 16, S-4);
 
-            // Meriam
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, -3, S/2, 6);
+            ctx.fillStyle = t.color;
+            ctx.beginPath(); ctx.roundRect(-S/2+14, -S/2+8, S-28, S-16, 8); ctx.fill();
+
+            ctx.fillStyle = '#030509';
+            ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = t.color;
+            ctx.fillRect(0, -5, S/2 + 6, 10);
 
             ctx.restore();
 
-            // HP Bar Tank
-            ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(t.x+4, t.y-10, S-8, 4);
-            ctx.fillStyle = t.color; ctx.fillRect(t.x+4, t.y-10, ((S-8) * Math.max(0, t.hp)) / t.maxHp, 4);
+            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(t.x+6, t.y-16, S-12, 5);
+            ctx.fillStyle = t.color;
+            ctx.fillRect(t.x+6, t.y-16, ((S-12) * Math.max(0, t.hp)) / t.maxHp, 5);
+            
+            ctx.fillStyle = t.color; ctx.font = 'bold 10px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(`P${t.id}${t.isBot ? ' (BOT)' : ''}`, t.x+S/2, t.y-20);
         }
 
         function draw() {
-            ctx.fillStyle = '#030408';
-            ctx.fillRect(0, 0, INTERNAL_RES, INTERNAL_RES);
+            ctx.save();
+            if(shakeTime > 0) {
+                shakeTime--;
+                ctx.translate((Math.random()-0.5)*3, (Math.random()-0.5)*3); 
+            }
+
+            ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     let x = c*S, y = r*S;
+                    ctx.strokeStyle = 'rgba(0, 255, 204, 0.05)';
+                    ctx.strokeRect(x,y,S,S);
+
                     if(map[r][c] === 1) { 
                         ctx.fillStyle = '#4a1500'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 1.5; ctx.strokeRect(x+2,y+2,S-4,S-4);
                     } else if(map[r][c] === 2) { 
                         ctx.fillStyle = '#0a0d18'; ctx.fillRect(x,y,S,S);
-                        ctx.strokeStyle = '#00ffcc'; ctx.strokeRect(x,y,S,S);
-                    } else if(map[r][c] === 3) {
-                        ctx.fillStyle = 'rgba(16, 185, 129, 0.5)'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 1; ctx.strokeRect(x,y,S,S);
                     }
                 }
             }
 
             powerups.forEach(pw => {
-                ctx.fillStyle = '#ffea00';
-                ctx.beginPath(); ctx.arc(pw.x, pw.y, 12, 0, Math.PI*2); ctx.fill();
+                pw.floatOffset += 0.05;
+                let floatY = pw.y + Math.sin(pw.floatOffset) * 4;
+                ctx.fillStyle = '#00ffcc';
+                ctx.beginPath(); ctx.arc(pw.x, floatY, 14, 0, Math.PI*2); ctx.fill();
             });
 
             tanks.forEach(drawTank);
 
             bullets.forEach(b => {
-                ctx.fillStyle = b.c;
+                ctx.fillStyle = '#ffffff'; 
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill();
             });
 
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
-                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-                ctx.fillStyle = p.c;
-                ctx.fillRect(p.x, p.y, p.size, p.size);
+                p.x += p.vx; p.y += p.vy; p.life -= 0.035;
+                ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.c;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
                 if(p.life <= 0) particles.splice(i,1);
             }
+            ctx.globalAlpha = 1;
+            ctx.restore();
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
