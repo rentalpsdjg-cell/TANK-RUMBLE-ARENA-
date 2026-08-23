@@ -3,96 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FULL ULTIMATE EDITION</title>
+    <title>TANK RUMBLE VIP - ULTIMATE FIXED</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #020205; color: #fff; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; }
         
-        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #080a14, #000); }
-        canvas { background: #030408; border: 3px solid #00ffcc; box-shadow: 0 0 35px rgba(0, 255, 204, 0.3); max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; }
+        #game-container { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #020205; 
+            padding: 4px;
+        }
 
-        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 18px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); }
-        .hud-card { background: rgba(10, 12, 20, 0.9); border: 1px solid rgba(0, 255, 204, 0.5); padding: 8px 14px; border-radius: 10px; backdrop-filter: blur(10px); pointer-events: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
-        .hp-bar-bg { width: 140px; height: 12px; background: #111; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; overflow: hidden; margin-top: 5px; }
+        /* HUD TOP PANEL FIXED FIT */
+        .hud-layer { 
+            width: 100%; 
+            max-width: 500px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            z-index: 10; 
+            background: rgba(10, 12, 20, 0.95);
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            border-radius: 8px;
+            padding: 4px 8px;
+            gap: 4px;
+        }
+
+        .hud-btn-group { display: flex; gap: 4px; align-items: center; }
+        .btn-hud-action { 
+            background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid #ffaa00; 
+            padding: 4px 6px; border-radius: 6px; font-weight: 900; font-size: 10px; cursor: pointer; 
+        }
+        .btn-hud-exit { background: rgba(204,0,0,0.2); color: #ff3366; border-color: #ff3366; }
+
+        .hud-card { display: flex; flex-direction: column; align-items: flex-end; }
+        .hp-bar-bg { width: 90px; height: 8px; background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
-        .btn-hud-action { background: rgba(30,30,40,0.8); color: #ffaa00; border: 1px solid #ffaa00; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer; pointer-events: auto; margin-right: 6px; backdrop-filter: blur(4px); transition: 0.2s; }
-        .btn-hud-action:hover { background: #ffaa00; color: #000; }
-        .btn-hud-exit { background: rgba(204,0,0,0.8); color: #fff; border: 1px solid #ff0055; }
+        /* CANVAS SCALING PAS DI LAYAR */
+        .canvas-wrapper {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+            margin: 4px 0;
+        }
+        canvas { 
+            background: #030408; 
+            border: 2px solid #00ffcc; 
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2); 
+            max-width: 100%; 
+            max-height: 100%; 
+            aspect-ratio: 1 / 1;
+            object-fit: contain; 
+            border-radius: 8px; 
+        }
 
-        #round-indicator { background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; padding: 6px 18px; border-radius: 14px; font-weight: 900; font-size: 15px; text-align: center; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,255,204,0.6); margin-bottom: 6px; }
-
-        .controls-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; align-items: flex-end; padding: 25px; }
-        .dpad-container { pointer-events: auto; display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 5px; opacity: 0.9; }
-        .btn-ctrl { background: rgba(18, 20, 32, 0.85); border: 2px solid #00ffcc; color: #fff; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 22px; font-weight: bold; touch-action: manipulation; backdrop-filter: blur(4px); box-shadow: 0 0 10px rgba(0,255,204,0.3); }
+        /* BOTTOM CONTROLS PANEL PAS DITAMBAH TOUCH TARGET LEBIH NYAMAN */
+        .controls-overlay { 
+            width: 100%; 
+            max-width: 500px; 
+            height: 135px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0 8px; 
+            z-index: 20; 
+            pointer-events: auto;
+        }
+        
+        .dpad-container { 
+            display: grid; 
+            grid-template-columns: repeat(3, 42px); 
+            grid-template-rows: repeat(3, 42px); 
+            gap: 3px; 
+        }
+        .btn-ctrl { 
+            background: rgba(18, 20, 32, 0.9); 
+            border: 1.5px solid #00ffcc; 
+            color: #fff; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 18px; 
+            font-weight: bold; 
+            touch-action: manipulation; 
+        }
         .btn-ctrl:active { background: #00ffcc; color: #000; }
         
-        .fire-container { pointer-events: auto; margin-bottom: 5px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .btn-fire-ff { width: 85px; height: 85px; border-radius: 50%; background: radial-gradient(circle, #ff0055, #660011); border: 3px solid #00ffcc; color: #fff; font-size: 15px; font-weight: 900; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 30px rgba(255,0,85,0.7); touch-action: manipulation; cursor: pointer; }
+        .fire-container { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .btn-fire-ff { 
+            width: 70px; height: 70px; border-radius: 50%; 
+            background: radial-gradient(circle, #ff0055, #660011); 
+            border: 2px solid #00ffcc; color: #fff; font-size: 12px; font-weight: 900; 
+            display: flex; justify-content: center; align-items: center; 
+            box-shadow: 0 0 15px rgba(255,0,85,0.6); touch-action: manipulation; cursor: pointer; 
+        }
         
-        .btn-auto-fire { background: rgba(10, 12, 20, 0.9); border: 2px solid #ffaa00; color: #ffaa00; padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: 900; cursor: pointer; backdrop-filter: blur(5px); box-shadow: 0 0 10px rgba(255,170,0,0.4); }
-        .btn-auto-fire.active { background: #ffaa00; color: #000; box-shadow: 0 0 15px #ffaa00; }
+        .btn-auto-fire { 
+            background: rgba(10, 12, 20, 0.9); border: 1px solid #ffaa00; color: #ffaa00; 
+            padding: 4px 8px; border-radius: 12px; font-size: 9px; font-weight: 900; cursor: pointer; 
+        }
+        .btn-auto-fire.active { background: #ffaa00; color: #000; }
 
-        .modal-screen { position: absolute; inset: 0; background: rgba(2, 3, 8, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); overflow-y: auto; padding: 20px; }
-        .menu-title { font-size: calc(2vw + 18px); font-weight: 900; color: #00ffcc; text-shadow: 0 0 35px #00ffcc; font-style: italic; margin-bottom: 2px; text-align: center; }
-        .menu-sub { font-size: 11px; color: #ffaa00; letter-spacing: 3px; font-weight: bold; margin-bottom: 12px; text-align: center; }
+        /* MODAL POPUPS */
+        .modal-screen { 
+            position: absolute; inset: 0; background: rgba(2, 3, 8, 0.97); 
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: center; 
+            z-index: 100; backdrop-filter: blur(12px); overflow-y: auto; padding: 12px; 
+        }
+        .menu-title { font-size: 20px; font-weight: 900; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; text-align: center; }
+        .menu-sub { font-size: 9px; color: #ffaa00; letter-spacing: 1.5px; font-weight: bold; margin-bottom: 8px; text-align: center; }
         
-        .main-panel { background: rgba(12, 14, 25, 0.9); border: 2px solid #00ffcc; padding: 16px; border-radius: 14px; margin-bottom: 12px; width: 95%; max-width: 440px; box-shadow: 0 10px 40px rgba(0,255,204,0.2); display: flex; flex-direction: column; gap: 10px; }
-        .room-box input, select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #00ffcc; background: #05060c; color: #00ffcc; font-size: 12px; text-align: center; font-weight: bold; }
+        .main-panel { 
+            background: rgba(12, 14, 25, 0.95); border: 1.5px solid #00ffcc; 
+            padding: 10px; border-radius: 12px; width: 100%; max-width: 420px; 
+            display: flex; flex-direction: column; gap: 6px; 
+        }
+        .room-box input, select { 
+            width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #00ffcc; 
+            background: #05060c; color: #00ffcc; font-size: 11px; text-align: center; font-weight: bold; 
+        }
 
-        .section-label { font-size: 11px; color: #ffaa00; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .section-label { font-size: 9px; color: #ffaa00; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 
-        .btn-mode { background: #05060c; border: 1.5px solid #1e293b; color: #aaa; padding: 8px 4px; border-radius: 8px; font-size: 11px; font-weight: 900; cursor: pointer; text-align: center; }
-        .btn-mode.active { background: #00ffcc; color: #000; border-color: #fff; box-shadow: 0 0 12px #00ffcc; }
+        .btn-mode { background: #05060c; border: 1px solid #1e293b; color: #aaa; padding: 6px 2px; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer; text-align: center; }
+        .btn-mode.active { background: #00ffcc; color: #000; border-color: #fff; box-shadow: 0 0 8px #00ffcc; }
 
-        .skin-option { height: 35px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 10px; color: #000; }
-        .skin-option.selected { border-color: #fff; box-shadow: 0 0 10px #fff; }
+        .skin-option { height: 28px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 9px; color: #000; }
+        .skin-option.selected { border-color: #fff; box-shadow: 0 0 8px #fff; }
 
-        .btn-ff { width: 100%; padding: 11px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; font-weight: 900; font-size: 12px; cursor: pointer; box-shadow: 0 6px 25px rgba(0, 255, 204, 0.4); text-transform: uppercase; }
-        .btn-sub { background: #161824; border: 2px solid #ffaa00; color: #ffaa00; }
+        .btn-ff { width: 100%; padding: 8px; border-radius: 8px; border: none; background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; font-weight: 900; font-size: 11px; cursor: pointer; text-transform: uppercase; }
+        .btn-sub { background: #161824; border: 1.5px solid #ffaa00; color: #ffaa00; }
         .btn-bot { background: linear-gradient(135deg, #ffaa00, #ff6600); color: #000; }
         .btn-start { background: linear-gradient(135deg, #ff0055, #ff6600); color: #fff; }
         .btn-reset { background: linear-gradient(135deg, #cc0000, #ff0055); color: #fff; }
 
-        .room-code-display { background: #05060c; border: 2px dashed #00ffcc; border-radius: 8px; padding: 8px; font-size: 16px; font-weight: 900; color: #00ffcc; letter-spacing: 2px; text-align: center; }
-        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 8px 0; color: #fff; font-size: 11px; }
-        .leaderboard-table th, .leaderboard-table td { border: 1px solid #333; padding: 6px; text-align: center; }
+        .room-code-display { background: #05060c; border: 1.5px dashed #00ffcc; border-radius: 6px; padding: 6px; font-size: 14px; font-weight: 900; color: #00ffcc; text-align: center; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 6px 0; color: #fff; font-size: 10px; }
+        .leaderboard-table th, .leaderboard-table td { border: 1px solid #333; padding: 4px; text-align: center; }
         .leaderboard-table th { background: #00ffcc; color: #000; }
         
-        .stat-btn { background: #1a1c2e; border: 1px solid #00ffcc; color: #00ffcc; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px; }
-        #network-status { font-size: 11px; text-align: center; font-weight: bold; color: #ff0055; margin-top: 4px; }
+        .stat-btn { background: #1a1c2e; border: 1px solid #00ffcc; color: #00ffcc; padding: 2px 6px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 9px; }
+        #network-status { font-size: 10px; text-align: center; font-weight: bold; color: #ff0055; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <!-- TOP HUD -->
         <div class="hud-layer">
-            <div style="display:flex; gap:6px; align-items:center;">
-                <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">🚪 EXIT</button>
-                <button class="btn-hud-action" onclick="resetOnlineRoom()">🔄 RESTART</button>
-                <button class="btn-hud-action" onclick="openSettings()">⚙️ SETTING</button>
-                
-                <div class="hud-card" id="my-player-hud">
-                    <div style="color:#00ffcc; font-size:11px; font-weight:bold;" id="player-id-tag">P1 (KAMU)</div>
-                    <div style="font-size:11px; font-weight:900;">KILLS: <span id="p1-kills" style="color:#ffaa00;">0</span></div>
-                    <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
-                </div>
+            <div class="hud-btn-group">
+                <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">EXIT</button>
+                <button class="btn-hud-action" onclick="resetOnlineRoom()">RESTART</button>
+                <button class="btn-hud-action" onclick="openSettings()">SETTING</button>
             </div>
 
-            <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                <div id="round-indicator">ROUND 1 / 3</div>
-                <div class="hud-card" style="text-align:right;">
-                    <div style="color:#aaa; font-size:10px; font-weight:bold;">SISA PEMAIN</div>
-                    <div id="alive-count" style="font-size:18px; font-weight:900; color:#00ff66;">0</div>
-                </div>
+            <div style="text-align:center;">
+                <div id="round-indicator" style="font-size:10px; font-weight:900; color:#00ffcc;">ROUND 1/3</div>
+                <div style="font-size:9px; color:#aaa;">SISA: <span id="alive-count" style="color:#00ff66; font-weight:bold;">0</span></div>
+            </div>
+
+            <div class="hud-card">
+                <div style="color:#00ffcc; font-size:9px; font-weight:bold;" id="player-id-tag">P1 (KAMU)</div>
+                <div style="font-size:9px; font-weight:900;">KILLS: <span id="p1-kills" style="color:#ffaa00;">0</span></div>
+                <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
             </div>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
+        <!-- GAME ARENA WRAPPER -->
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
 
+        <!-- TOUCH CONTROLS -->
         <div class="controls-overlay" id="player-controls">
             <div class="dpad-container">
                 <div></div><div class="btn-ctrl" id="btn-u">▲</div><div></div>
@@ -101,11 +197,12 @@
             </div>
 
             <div class="fire-container">
-                <button class="btn-auto-fire" id="btn-auto" onclick="toggleAutoFire()">⚡ AUTO FIRE: OFF</button>
+                <button class="btn-auto-fire" id="btn-auto" onclick="toggleAutoFire()">AUTO FIRE: OFF</button>
                 <div class="btn-fire-ff" id="btn-f">🎯 FIRE</div>
             </div>
         </div>
 
+        <!-- LOBBY MAIN MENU -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE VIP</div>
             <div class="menu-sub">FULL FEATURES & REALTIME MABAR</div>
@@ -122,7 +219,7 @@
 
                 <div class="section-label">2. KESULITAN BOT:</div>
                 <select id="bot-difficulty">
-                    <option value="easy">🟢 EASY (BOT SANTAI)</option>
+                    <option value="easy">🟢 EASY (SANTAI)</option>
                     <option value="medium" selected>🟡 MEDIUM (TAKTIKAL & TAKTIS)</option>
                     <option value="hard">🔴 HARD (PRO PLAYER BOT)</option>
                 </select>
@@ -144,61 +241,63 @@
                 <div class="section-label">5. WARNA TANK KAMU:</div>
                 <div class="grid-3" id="skin-selector">
                     <div class="skin-option selected" style="background:#00ffcc;" onclick="selectSkin('#00ffcc', this)">CYAN</div>
-                    <div class="skin-option" style="background:#ff0055;" onclick="selectSkin('#ff0055', this)">RED</div>
-                    <div class="skin-option" style="background:#cc00ff;" onclick="selectSkin('#cc00ff', this)">PURPLE</div>
+                    <div class="skin-option" style="background:#ff0055; color:#fff;" onclick="selectSkin('#ff0055', this)">RED</div>
+                    <div class="skin-option" style="background:#cc00ff; color:#fff;" onclick="selectSkin('#cc00ff', this)">PURPLE</div>
                     <div class="skin-option" style="background:#00ff66;" onclick="selectSkin('#00ff66', this)">GREEN</div>
                     <div class="skin-option" style="background:#ffaa00;" onclick="selectSkin('#ffaa00', this)">GOLD</div>
-                    <div class="skin-option" style="background:#0099ff;" onclick="selectSkin('#0099ff', this)">BLUE</div>
+                    <div class="skin-option" style="background:#0099ff; color:#fff;" onclick="selectSkin('#0099ff', this)">BLUE</div>
                 </div>
 
                 <div class="section-label">6. UPGRADE STATS (POIN: <span id="stat-points" style="color:#00ffcc;">3</span>):</div>
-                <div class="grid-3" style="font-size:10px; text-align:center;">
-                    <div>SPEED: <span id="stat-spd">1</span> <button class="stat-btn" onclick="upStat('spd')">+</button></div>
-                    <div>DAMAGE: <span id="stat-dmg">1</span> <button class="stat-btn" onclick="upStat('dmg')">+</button></div>
-                    <div>RELOAD: <span id="stat-rld">1</span> <button class="stat-btn" onclick="upStat('rld')">+</button></div>
+                <div class="grid-3" style="font-size:9px; text-align:center;">
+                    <div>SPD: <span id="stat-spd">1</span> <button class="stat-btn" onclick="upStat('spd')">+</button></div>
+                    <div>DMG: <span id="stat-dmg">1</span> <button class="stat-btn" onclick="upStat('dmg')">+</button></div>
+                    <div>RLD: <span id="stat-rld">1</span> <button class="stat-btn" onclick="upStat('rld')">+</button></div>
                 </div>
 
                 <button class="btn-ff btn-bot" onclick="startBotMatch()">🤖 MAIN LAWAN AI BOT (OFFLINE)</button>
 
-                <div style="margin: 4px 0; font-weight: bold; font-size:10px; text-align:center; color:#00ffcc;">--- MABAR MULTIPLAYER (ONLINE) ---</div>
+                <div style="margin: 2px 0; font-weight: bold; font-size:9px; text-align:center; color:#00ffcc;">--- MABAR MULTIPLAYER (ONLINE) ---</div>
 
                 <button class="btn-ff" onclick="createRoom()">👑 BUAT ROOM (HOST MABAR)</button>
                 
-                <div id="host-info" style="display:none; flex-direction:column; gap:6px;">
+                <div id="host-info" style="display:none; flex-direction:column; gap:4px;">
                     <div class="room-code-display" id="room-code-tag">CODE: ----</div>
-                    <div style="font-size:11px; color:#00ffcc; text-align:center;" id="connected-count">Pemain Terhubung: 1 / 2</div>
+                    <div style="font-size:10px; color:#00ffcc; text-align:center;" id="connected-count">Pemain Terhubung: 1 / 2</div>
                     <button class="btn-ff btn-start" onclick="startOnlineMatch()">🚀 MULAI MULTIPLAYER</button>
                 </div>
 
-                <div class="grid-2" style="margin-top:4px;">
-                    <input type="text" id="join-room-input" placeholder="4 ANGKA KODE" maxlength="4">
+                <div class="grid-2" style="margin-top:2px;">
+                    <input type="text" id="join-room-input" placeholder="KODE ROOM" maxlength="4">
                     <button class="btn-ff btn-sub" onclick="joinRoom()">🎮 GABUNG ROOM</button>
                 </div>
             </div>
         </div>
 
+        <!-- SETTINGS MODAL -->
         <div id="settings-screen" class="modal-screen" style="display:none;">
             <div class="menu-title">PENGATURAN</div>
             <div class="main-panel">
                 <div class="section-label">AUDIO & KOMENTATOR:</div>
                 <div class="grid-2">
-                    <button class="btn-ff" onclick="toggleAudio()" id="btn-audio-toggle">🔊 EFEK SUARA: ON</button>
-                    <button class="btn-ff" onclick="toggleVoice()" id="btn-voice-toggle">🎙️ SUARA KOMENTATOR: ON</button>
+                    <button class="btn-ff" onclick="toggleAudio()" id="btn-audio-toggle">🔊 SFX: ON</button>
+                    <button class="btn-ff" onclick="toggleVoice()" id="btn-voice-toggle">🎙️ VOICE: ON</button>
                 </div>
                 
-                <div class="section-label" style="margin-top:10px;">TAMPILAN & KONTROL:</div>
+                <div class="section-label" style="margin-top:8px;">TAMPILAN & KONTROL:</div>
                 <div class="grid-2">
-                    <button class="btn-ff btn-sub" onclick="toggleDpad()">🕹️ KONTROL D-PAD: ON</button>
+                    <button class="btn-ff btn-sub" onclick="toggleDpad()">🕹️ D-PAD ON/OFF</button>
                     <button class="btn-ff btn-sub" onclick="closeSettings()">❌ TUTUP</button>
                 </div>
             </div>
         </div>
 
+        <!-- WIN/LEADERBOARD MODAL -->
         <div id="win-screen" class="modal-screen" style="display:none;">
             <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
             <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH</div>
             
-            <div style="width: 95%; max-width: 420px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+            <div style="width: 100%; max-width: 380px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
                 <table class="leaderboard-table">
                     <thead>
                         <tr><th>Peringkat</th><th>Pemain</th><th>Kills</th><th>Skor</th></tr>
@@ -208,8 +307,8 @@
                 </table>
             </div>
             
-            <button class="btn-ff btn-reset" style="max-width:320px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
-            <button class="btn-ff btn-sub" style="max-width:320px; margin-top:6px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
+            <button class="btn-ff btn-reset" style="max-width:300px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
+            <button class="btn-ff btn-sub" style="max-width:300px; margin-top:4px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
         </div>
     </div>
 
@@ -266,9 +365,9 @@
         cvs.width = INTERNAL_RES;
         cvs.height = INTERNAL_RES;
 
-        const S = 75; // Ukuran 1 Grid
-        const G = 16; // Grid 16x16 (1200 / 75)
-        const TANK_SIZE = 48; // Bounding Box Size Tank
+        const S = 75; // Grid 75px
+        const G = 16; // Grid 16x16
+        const TANK_SIZE = 48;
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let connections = [];
@@ -285,20 +384,14 @@
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
-            el.innerText = txt;
-            el.style.color = color;
+            el.innerText = txt; el.style.color = color;
         }
 
         function toggleAutoFire() {
             isAutoFire = !isAutoFire;
             let btn = document.getElementById('btn-auto');
-            if(isAutoFire) {
-                btn.classList.add('active');
-                btn.innerText = "⚡ AUTO FIRE: ON";
-            } else {
-                btn.classList.remove('active');
-                btn.innerText = "⚡ AUTO FIRE: OFF";
-            }
+            btn.classList.toggle('active', isAutoFire);
+            btn.innerText = `AUTO FIRE: ${isAutoFire?'ON':'OFF'}`;
         }
 
         function selectSkin(color, el) {
@@ -309,8 +402,7 @@
 
         function upStat(type) {
             if(stats.points > 0) {
-                stats[type]++;
-                stats.points--;
+                stats[type]++; stats.points--;
                 document.getElementById('stat-points').innerText = stats.points;
                 document.getElementById('stat-' + type).innerText = stats[type];
             }
@@ -328,7 +420,7 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        // --- STUN PEERJS MULTIPLAYER SYSTEM ---
+        // --- MULTIPLAYER P2P STUN SYSTEM ---
         function initPeerServer(customId = null) {
             if(peer) peer.destroy();
             let config = {
@@ -356,8 +448,8 @@
                 document.getElementById('host-info').style.display = 'flex';
                 document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
                 updateConnectedStatus();
-                setNetStatus("ROOM AKTIF! SIAP MABAR KODE: " + roomCode, "#00ffcc");
-                speakIndo(`Room multiplayer dibuat. Kode ${roomCode}.`);
+                setNetStatus("ROOM AKTIF! KODE: " + roomCode, "#00ffcc");
+                speakIndo(`Room dibuat, kode ${roomCode}`);
             });
 
             peer.on('connection', conn => {
@@ -366,19 +458,15 @@
                 let assignedSlot = connections.length;
 
                 conn.on('open', () => {
-                    setNetStatus(`TEMAN (P${assignedSlot+1}) TERHUBUNG!`, "#00ff66");
+                    setNetStatus(`P${assignedSlot+1} TERHUBUNG!`, "#00ff66");
                     conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit });
                 });
 
                 conn.on('data', data => handleData(data));
-                conn.on('close', () => {
-                    setNetStatus("TEMAN TERPUTUS!", "#ff0055");
-                });
+                conn.on('close', () => setNetStatus("TEMAN TERPUTUS!", "#ff0055"));
             });
 
-            peer.on('error', err => {
-                setNetStatus("GAGAL BUAT ROOM, COBA LAGI (KODE SAMA)", "#ff0055");
-            });
+            peer.on('error', err => setNetStatus("GAGAL BUAT ROOM, COBA LAGI", "#ff0055"));
         }
 
         function joinRoom() {
@@ -393,15 +481,15 @@
                 hostConn = peer.connect(fullId, { reliable: true });
                 
                 hostConn.on('open', () => { 
-                    setNetStatus("BERHASIL MASUK ROOM! MENUNGGU START...", "#00ff66");
+                    setNetStatus("BERHASIL MASUK! MENUNGGU START...", "#00ff66");
                     speakIndo("Berhasil terhubung!"); 
                 });
 
                 hostConn.on('data', data => handleData(data));
-                hostConn.on('close', () => setNetStatus("KONEKSI KE HOST TERPUTUS!", "#ff0055"));
+                hostConn.on('close', () => setNetStatus("TERPUTUS DARI HOST!", "#ff0055"));
             });
 
-            peer.on('error', err => setNetStatus("KODE ROOM TIDAK DITEMUKAN!", "#ff0055"));
+            peer.on('error', err => setNetStatus("KODE ROOM SALAH / TIDAK DITEMUKAN!", "#ff0055"));
         }
 
         function startBotMatch() {
@@ -422,21 +510,16 @@
 
         function broadcast(data) {
             if(isBotMode) return;
-            if(isHost) {
-                connections.forEach(c => { if(c.open) c.send(data); });
-            } else if(hostConn && hostConn.open) {
-                hostConn.send(data);
-            }
+            if(isHost) connections.forEach(c => { if(c.open) c.send(data); });
+            else if(hostConn && hostConn.open) hostConn.send(data);
         }
 
         function handleData(data) {
             if(data.type === 'INIT_SLOT') {
-                mySlot = data.slot;
-                maxPlayersLimit = data.maxPlayers;
+                mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
                 document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
             } else if(data.type === 'START_MATCH') {
-                currentRound = data.round || 1; 
-                maxPlayersLimit = data.maxPlayers;
+                currentRound = data.round || 1; maxPlayersLimit = data.maxPlayers;
                 initFullMatch(data.mapType || 0, data.weaponType || 'cannon');
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
@@ -454,14 +537,14 @@
             }
         }
 
-        // --- MAP & BOUNDING BOX COLLISION DETECTOR (ANTI TEMBUS) ---
+        // --- MAP & COLLISION DETECTOR ---
         let map = [];
 
         function generateMap(type = 0) {
             map = Array(G).fill(0).map(() => Array(G).fill(0));
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
-                    if(r===0 || c===0 || r===G-1 || c===G-1) map[r][c] = 2; // Tembok Luar Permanen
+                    if(r===0 || c===0 || r===G-1 || c===G-1) map[r][c] = 2;
                     else if(type == 0 && r%3===0 && c%3===0) map[r][c] = 1; 
                     else if(type == 2 && (r===4 || r===11) && c>3 && c<12) map[r][c] = 2; 
                 }
@@ -469,15 +552,11 @@
         }
 
         function checkWallCollision(newX, newY) {
-            let left = newX + (S - TANK_SIZE)/2;
-            let right = left + TANK_SIZE;
-            let top = newY + (S - TANK_SIZE)/2;
-            let bottom = top + TANK_SIZE;
+            let left = newX + (S - TANK_SIZE)/2, right = left + TANK_SIZE;
+            let top = newY + (S - TANK_SIZE)/2, bottom = top + TANK_SIZE;
 
-            let minGridX = Math.floor(left / S);
-            let maxGridX = Math.floor(right / S);
-            let minGridY = Math.floor(top / S);
-            let maxGridY = Math.floor(bottom / S);
+            let minGridX = Math.floor(left / S), maxGridX = Math.floor(right / S);
+            let minGridY = Math.floor(top / S), maxGridY = Math.floor(bottom / S);
 
             for(let r = minGridY; r <= maxGridY; r++) {
                 for(let c = minGridX; c <= maxGridX; c++) {
@@ -503,24 +582,15 @@
             for(let i=0; i<totalPlayers; i++) {
                 let isBot = isBotMode && (i !== mySlot);
                 tanks.push({
-                    id: i,
-                    isBot: isBot,
-                    name: isBot ? `BOT ${i+1}` : `P${i+1}`,
-                    x: 0, y: 0,
-                    angle: 90,
+                    id: i, isBot: isBot, name: isBot ? `BOT ${i+1}` : `P${i+1}`,
+                    x: 0, y: 0, angle: 90,
                     color: i === mySlot ? selectedColor : defaultColors[i],
-                    hp: 200, maxHp: 200,
-                    kills: 0, score: 0, alive: true,
+                    hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
                     spd: (2.5 + (i===mySlot ? stats.spd*0.4 : 0.4)) * (isBot ? botSpdMulti : 1),
                     dmg: 35 + (i===mySlot ? stats.dmg*10 : 0),
                     reload: 380 - (i===mySlot ? stats.rld*40 : 0),
-                    weapon: weaponType,
-                    muzzleFlash: 0,
-                    botDir: 90,
-                    botChangeDirTimer: 0,
-                    botReactionTimer: 0,
-                    botEvadeTimer: 0,
-                    difficulty: diff
+                    weapon: weaponType, muzzleFlash: 0,
+                    botDir: 90, botChangeDirTimer: 0, botReactionTimer: 0, botEvadeTimer: 0, difficulty: diff
                 });
             }
             startNextRound(mapType);
@@ -528,23 +598,21 @@
 
         function startNextRound(mapType = 0) {
             generateMap(mapType);
-
             let spawnCoords = [
                 {x:1,y:1, angle:90}, {x:14,y:14, angle:270}, {x:14,y:1, angle:180}, {x:1,y:14, angle:0},
                 {x:7,y:1, angle:90}, {x:7,y:14, angle:270}, {x:1,y:7, angle:0}, {x:14,y:7, angle:180}
             ];
 
             tanks.forEach((t, i) => {
-                t.x = spawnCoords[i].x * S;
-                t.y = spawnCoords[i].y * S;
-                t.angle = spawnCoords[i].angle;
-                t.hp = t.maxHp;
-                t.alive = true;
+                t.x = spawnCoords[i%8].x * S;
+                t.y = spawnCoords[i%8].y * S;
+                t.angle = spawnCoords[i%8].angle;
+                t.hp = t.maxHp; t.alive = true;
             });
 
             bullets = []; particles = []; isGameOver = false;
 
-            document.getElementById('round-indicator').innerText = `ROUND ${currentRound} / ${TOTAL_ROUNDS}`;
+            document.getElementById('round-indicator').innerText = `ROUND ${currentRound}/${TOTAL_ROUNDS}`;
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'none';
@@ -574,26 +642,21 @@
 
         function openSettings() { document.getElementById('settings-screen').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settings-screen').style.display = 'none'; }
-        function toggleAudio() { soundEnabled = !soundEnabled; document.getElementById('btn-audio-toggle').innerText = `🔊 EFEK SUARA: ${soundEnabled?'ON':'OFF'}`; }
-        function toggleVoice() { voiceEnabled = !voiceEnabled; document.getElementById('btn-voice-toggle').innerText = `🎙️ SUARA KOMENTATOR: ${voiceEnabled?'ON':'OFF'}`; }
+        function toggleAudio() { soundEnabled = !soundEnabled; document.getElementById('btn-audio-toggle').innerText = `🔊 SFX: ${soundEnabled?'ON':'OFF'}`; }
+        function toggleVoice() { voiceEnabled = !voiceEnabled; document.getElementById('btn-voice-toggle').innerText = `🎙️ VOICE: ${voiceEnabled?'ON':'OFF'}`; }
         function toggleDpad() { 
             let ctrl = document.getElementById('player-controls');
             ctrl.style.display = ctrl.style.display === 'none' ? 'flex' : 'none';
         }
 
         function exitGame() { location.reload(); }
-
-        function resetOnlineRoom() {
-            initFullMatch(0, 'cannon');
-            broadcast({ type: 'RESET_ROOM' });
-        }
+        function resetOnlineRoom() { initFullMatch(0, 'cannon'); broadcast({ type: 'RESET_ROOM' }); }
 
         function fire(t, isLocal = true) {
             if(!t.alive || isGameOver) return;
             let now = Date.now();
             if(t.lastF && now - t.lastF < t.reload) return;
-            t.lastF = now;
-            t.muzzleFlash = 8;
+            t.lastF = now; t.muzzleFlash = 8;
 
             let rad = t.angle * Math.PI / 180;
             let spawnX = t.x + S/2 + Math.cos(rad) * (S/2 + 5);
@@ -628,7 +691,7 @@
 
         function addBoom(x, y, color, isBig = false) {
             playSound('boom');
-            let count = isBig ? 30 : 15;
+            let count = isBig ? 25 : 12;
             for(let i=0; i<count; i++) {
                 particles.push({
                     x: x, y: y, 
@@ -641,28 +704,20 @@
         // --- AI BOT ENGINE ---
         function updateBotLogic(bot) {
             if(!bot.alive || !bot.isBot || isGameOver) return;
-
-            let centerBotX = bot.x + S/2;
-            let centerBotY = bot.y + S/2;
+            let centerBotX = bot.x + S/2, centerBotY = bot.y + S/2;
 
             let dangerBullet = null;
             if(bot.difficulty !== 'easy') {
                 dangerBullet = bullets.find(b => {
                     if(b.id === bot.id) return false;
                     let dist = Math.hypot(b.x - centerBotX, b.y - centerBotY);
-                    if(dist < 180) {
-                        let bulletNextX = b.x + b.vx * 10;
-                        let bulletNextY = b.y + b.vy * 10;
-                        return Math.hypot(bulletNextX - centerBotX, bulletNextY - centerBotY) < dist;
-                    }
-                    return false;
+                    return dist < 180;
                 });
             }
 
             if(dangerBullet && bot.botEvadeTimer <= 0) {
                 let bulletAngle = Math.atan2(dangerBullet.vy, dangerBullet.vx) * 180 / Math.PI;
-                let dodgeAngles = [bulletAngle + 90, bulletAngle - 90];
-                bot.botDir = Math.round(dodgeAngles[Math.floor(Math.random() * 2)] / 90) * 90;
+                bot.botDir = Math.round((bulletAngle + 90) / 90) * 90;
                 bot.botEvadeTimer = 25;
             }
             if(bot.botEvadeTimer > 0) bot.botEvadeTimer--;
@@ -670,29 +725,16 @@
             let targets = tanks.filter(t => t.alive && t.id !== bot.id);
             if(targets.length === 0) return;
 
-            let target = targets.reduce((closest, t) => {
-                let d = Math.hypot((t.x + S/2) - centerBotX, (t.y + S/2) - centerBotY);
-                return d < closest.d ? { t: t, d: d } : closest;
-            }, { t: targets[0], d: Infinity }).t;
+            let target = targets[0];
+            let dx = (target.x + S/2) - centerBotX, dy = (target.y + S/2) - centerBotY;
 
-            let dx = (target.x + S/2) - centerBotX;
-            let dy = (target.y + S/2) - centerBotY;
-            let distToTarget = Math.hypot(dx, dy);
-
-            let alignedX = Math.abs(dx) < 45;
-            let alignedY = Math.abs(dy) < 45;
+            let alignedX = Math.abs(dx) < 45, alignedY = Math.abs(dy) < 45;
 
             bot.botChangeDirTimer--;
             if(bot.botChangeDirTimer <= 0) {
-                bot.botChangeDirTimer = 30 + Math.floor(Math.random() * 40);
-
-                if(alignedX || alignedY) {
-                    if(distToTarget > 250) bot.botDir = alignedX ? (dy > 0 ? 90 : 270) : (dx > 0 ? 0 : 180);
-                    else if(distToTarget < 120) bot.botDir = alignedX ? (dy > 0 ? 270 : 90) : (dx > 0 ? 180 : 0);
-                } else {
-                    if(Math.random() < 0.6) bot.botDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 0 : 180) : (dy > 0 ? 90 : 270);
-                    else bot.botDir = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
-                }
+                bot.botChangeDirTimer = 35;
+                if(alignedX || alignedY) bot.botDir = alignedX ? (dy > 0 ? 90 : 270) : (dx > 0 ? 0 : 180);
+                else bot.botDir = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
             }
 
             let radDir = bot.botDir * Math.PI / 180;
@@ -703,22 +745,13 @@
                 bot.x = nextX; bot.y = nextY; bot.angle = bot.botDir;
             } else {
                 bot.botDir = (bot.botDir + 90) % 360;
-                bot.botChangeDirTimer = 20;
             }
 
             if(alignedX || alignedY) {
-                if(alignedX) bot.angle = dy > 0 ? 90 : 270;
-                if(alignedY) bot.angle = dx > 0 ? 0 : 180;
-
                 bot.botReactionTimer++;
-                let reactionNeeded = bot.difficulty === 'hard' ? 4 : (bot.difficulty === 'medium' ? 10 : 22);
-
-                if(bot.botReactionTimer >= reactionNeeded) {
-                    fire(bot, false);
-                    bot.botReactionTimer = 0;
+                if(bot.botReactionTimer >= (bot.difficulty === 'hard' ? 4 : 12)) {
+                    fire(bot, false); bot.botReactionTimer = 0;
                 }
-            } else {
-                bot.botReactionTimer = 0;
             }
         }
 
@@ -727,27 +760,24 @@
             if(roundWinner) roundWinner.score += 200;
 
             if(currentRound < TOTAL_ROUNDS) {
-                speakIndo(`Ronde ${currentRound} selesai!`);
+                speakIndo(`Ronde ${currentRound} selesai`);
                 setTimeout(() => {
                     currentRound++;
                     if(isHost && !isBotMode) broadcast({ type: 'NEXT_ROUND', round: currentRound });
                     startNextRound();
-                }, 3500);
+                }, 3000);
             } else {
                 speakIndo("Pertandingan selesai!");
-                setTimeout(() => { showFinalLeaderboard(); }, 1200);
+                setTimeout(() => { showFinalLeaderboard(); }, 1000);
             }
         }
 
-        // --- GAME LOOP UPDATE ---
         function update() {
             if(isGameOver) return;
 
             let p = tanks[mySlot];
             if(p && p.alive) {
-                let nextX = p.x;
-                let nextY = p.y;
-                let moved = false;
+                let nextX = p.x, nextY = p.y, moved = false;
 
                 if(keys['ArrowUp'] || keys['w']) { nextY -= p.spd; p.angle = 270; moved = true; }
                 else if(keys['ArrowDown'] || keys['s']) { nextY += p.spd; p.angle = 90; moved = true; }
@@ -756,12 +786,9 @@
 
                 if(keys[' '] || isAutoFire) fire(p, true);
 
-                if(moved) {
-                    if(!checkWallCollision(nextX, nextY)) {
-                        p.x = nextX;
-                        p.y = nextY;
-                        if(!isBotMode) broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
-                    }
+                if(moved && !checkWallCollision(nextX, nextY)) {
+                    p.x = nextX; p.y = nextY;
+                    if(!isBotMode) broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
                 }
             }
 
@@ -773,14 +800,8 @@
 
                 let gx = Math.floor(b.x/S), gy = Math.floor(b.y/S);
                 if(gy>=0 && gy<G && gx>=0 && gx<G) {
-                    if(map[gy][gx] === 1) { 
-                        addBoom(b.x, b.y, '#ffaa00', b.isRocket); 
-                        map[gy][gx]=0; bullets.splice(i,1); continue; 
-                    }
-                    if(map[gy][gx] === 2) { 
-                        addBoom(b.x, b.y, '#555', b.isRocket); 
-                        bullets.splice(i,1); continue; 
-                    }
+                    if(map[gy][gx] === 1) { addBoom(b.x, b.y, '#ffaa00', b.isRocket); map[gy][gx]=0; bullets.splice(i,1); continue; }
+                    if(map[gy][gx] === 2) { addBoom(b.x, b.y, '#555', b.isRocket); bullets.splice(i,1); continue; }
                 }
 
                 tanks.forEach(t => {
@@ -835,7 +856,6 @@
             });
         }
 
-        // --- DRAW CANVAS ---
         function draw() {
             ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
@@ -848,11 +868,9 @@
                     if(map[r][c] === 1) { 
                         ctx.fillStyle = '#3a1200'; ctx.fillRect(x,y,S,S);
                         ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 3; ctx.strokeRect(x+2,y+2,S-4,S-4);
-                        ctx.lineWidth = 1;
                     } else if(map[r][c] === 2) { 
                         ctx.fillStyle = '#0a0d18'; ctx.fillRect(x,y,S,S);
                         ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2; ctx.strokeRect(x,y,S,S);
-                        ctx.lineWidth = 1;
                     }
                 }
             }
@@ -863,70 +881,24 @@
                 ctx.translate(t.x + S/2, t.y + S/2);
                 ctx.rotate(t.angle * Math.PI / 180);
 
-                let mainColor = t.color;
-
                 ctx.fillStyle = '#111319';
-                ctx.strokeStyle = '#333b4d';
-                ctx.lineWidth = 2;
-                
-                ctx.fillRect(-S/2 + 6, -S/2 + 2, S - 12, 12);
-                ctx.strokeRect(-S/2 + 6, -S/2 + 2, S - 12, 12);
-                ctx.fillRect(-S/2 + 6, S/2 - 14, S - 12, 12);
-                ctx.strokeRect(-S/2 + 6, S/2 - 14, S - 12, 12);
+                ctx.strokeStyle = t.color; ctx.lineWidth = 3;
+                ctx.fillRect(-TANK_SIZE/2, -TANK_SIZE/2, TANK_SIZE, TANK_SIZE);
+                ctx.strokeRect(-TANK_SIZE/2, -TANK_SIZE/2, TANK_SIZE, TANK_SIZE);
 
-                ctx.fillStyle = '#161923';
-                ctx.beginPath();
-                ctx.moveTo(-S/2 + 12, -S/2 + 12);
-                ctx.lineTo(S/2 - 10, -S/2 + 16);
-                ctx.lineTo(S/2 - 4, 0);
-                ctx.lineTo(S/2 - 10, S/2 - 16);
-                ctx.lineTo(-S/2 + 12, S/2 - 12);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = mainColor;
-                ctx.lineWidth = 2.5;
-                ctx.stroke();
-
-                ctx.fillStyle = '#2a3040';
-                ctx.strokeStyle = mainColor;
-                ctx.lineWidth = 1.5;
-                ctx.fillRect(2, -7, S/2 + 8, 5);
-                ctx.strokeRect(2, -7, S/2 + 8, 5);
-                ctx.fillRect(2, 2, S/2 + 8, 5);
-                ctx.strokeRect(2, 2, S/2 + 8, 5);
-
-                ctx.fillStyle = '#0d1017';
-                ctx.beginPath();
-                ctx.arc(-2, 0, 16, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = mainColor;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                if(t.muzzleFlash > 0) {
-                    ctx.fillStyle = '#ffaa00';
-                    ctx.beginPath();
-                    ctx.arc(S/2 + 15, 0, 9, 0, Math.PI * 2);
-                    ctx.fill();
-                    t.muzzleFlash--;
-                }
-
+                ctx.fillStyle = t.color;
+                ctx.fillRect(0, -5, TANK_SIZE/2 + 8, 10);
                 ctx.restore();
 
-                ctx.fillStyle = mainColor; 
-                ctx.font = '900 12px "Segoe UI", sans-serif'; 
+                ctx.fillStyle = t.color; 
+                ctx.font = '900 14px sans-serif'; 
                 ctx.textAlign = 'center';
-                ctx.fillText(t.name, t.x + S/2, t.y - 14);
+                ctx.fillText(t.name, t.x + S/2, t.y - 12);
             });
 
             bullets.forEach(b => {
-                ctx.shadowColor = b.c;
-                ctx.shadowBlur = 10;
                 ctx.fillStyle = b.c;
-                ctx.beginPath(); 
-                ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); 
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill();
             });
 
             for(let i=particles.length-1; i>=0; i--) {
@@ -934,9 +906,7 @@
                 p.x += p.vx; p.y += p.vy; p.life -= 0.04;
                 ctx.globalAlpha = Math.max(0, p.life); 
                 ctx.fillStyle = p.c;
-                ctx.beginPath(); 
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); 
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
                 if(p.life <= 0) particles.splice(i,1);
             }
             ctx.globalAlpha = 1;
