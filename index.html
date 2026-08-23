@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - SPECTATOR & JURI EDITION</title>
+    <title>TANK RUMBLE VIP - FIX POWER-UP SYNC</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -183,7 +183,7 @@
         <div class="spectator-controls" id="spectator-controls">
             <button class="btn-spec" onclick="prevTarget()">◀ PANTAU PEMAIN SEBELUMNYA</button>
             <div style="text-align:center;">
-                <div style="color:#ffaa00; font-size:10px; font-weight:bold;">MODES JURI / PENONTON</div>
+                <div style="color:#ffaa00; font-size:10px; font-weight:bold;">MODE JURI / PENONTON</div>
                 <div id="spec-target-name" style="color:#00ffcc; font-size:12px; font-weight:900;">MEMANTAU: ARENA BEBAS</div>
             </div>
             <button class="btn-spec" onclick="nextTarget()">PANTAU PEMAIN NEXT ▶</button>
@@ -472,7 +472,11 @@
 
                 conn.on('open', () => {
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
-                    let sendInit = () => { conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); };
+                    let sendInit = () => { 
+                        conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
+                        // Synchronize initial powerups
+                        powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
+                    };
                     sendInit(); setTimeout(sendInit, 500);
                 });
 
@@ -551,6 +555,14 @@
                 powerUps.push(data.item);
             } else if(data.type === 'REMOVE_POWERUP') {
                 powerUps = powerUps.filter(p => p.id !== data.id);
+                if(tanks[data.slot]) {
+                    if(data.powerType === 'shield') {
+                        tanks[data.slot].shieldTimer = 300;
+                    } else {
+                        tanks[data.slot].activePowerUp = data.powerType;
+                        tanks[data.slot].powerUpTimer = 350;
+                    }
+                }
             }
         }
 
@@ -655,7 +667,6 @@
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'none';
 
-            // UI MANAGEMENT PENONTON VS PEMAIN
             if(isSpectator) {
                 document.getElementById('player-controls').style.display = 'none';
                 document.getElementById('spectator-controls').style.display = 'flex';
@@ -673,7 +684,6 @@
             requestAnimationFrame(loop);
         }
 
-        // CONTROL NAVIGASI PENONTON / JURI
         function nextTarget() {
             spectatorTargetIndex++;
             if(spectatorTargetIndex >= tanks.length) spectatorTargetIndex = -1;
@@ -888,14 +898,18 @@
                     let pw = powerUps[i];
                     if(Math.hypot((t.x + S/2) - pw.x, (t.y + S/2) - pw.y) < TANK_SIZE/2 + pw.size/2) {
                         playSound('powerup');
+                        
                         if(pw.type === 'shield') t.shieldTimer = 300; 
                         else { t.activePowerUp = pw.type; t.powerUpTimer = 350; }
                         
                         if(t.id === mySlot && !isSpectator) speakIndo(pw.type === 'shield' ? "Perisai Aktif!" : "Senjata Super!");
 
                         let takenId = pw.id;
+                        let takenType = pw.type;
+                        let takerSlot = t.id;
+
                         powerUps.splice(i, 1);
-                        if(isHost) broadcast({ type: 'REMOVE_POWERUP', id: takenId });
+                        broadcast({ type: 'REMOVE_POWERUP', id: takenId, slot: takerSlot, powerType: takenType });
                     }
                 }
             });
@@ -964,7 +978,6 @@
             });
         }
 
-        // --- RENDER ARENA, POWER-UPS, TANK & MODE PENONTON ---
         function draw() {
             ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
@@ -1068,7 +1081,6 @@
             }
             ctx.globalAlpha = 1;
 
-            // SOROTAN JURI / SPECTATOR HIGHLIGHT
             if(isSpectator && spectatorTargetIndex !== -1 && tanks[spectatorTargetIndex]) {
                 let specT = tanks[spectatorTargetIndex];
                 if(specT.alive) {
