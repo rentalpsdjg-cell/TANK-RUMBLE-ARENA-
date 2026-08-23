@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE ULTRA HD: SUPER HIGH EDITION</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>TANK RUMBLE ULTRA HD: FIREBASE EDITION</title>
+    
+    <!-- FIREBASE SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: #020205; color: #fff; }
@@ -22,19 +26,15 @@
         .btn-hud-action:hover { background: #ffaa00; color: #000; }
         .btn-hud-exit { background: rgba(204,0,0,0.8); color: #fff; border: 1px solid #ff0055; }
 
-        /* HUD RONDE INDICATOR */
         #round-indicator { background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; padding: 6px 18px; border-radius: 14px; font-weight: 900; font-size: 15px; text-align: center; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,255,204,0.6); margin-bottom: 6px; }
 
-        /* KOMENTATOR BOX */
         #commentator-box { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); background: rgba(8, 8, 14, 0.95); border: 2px solid #00ffcc; padding: 10px 24px; border-radius: 25px; color: #00ffcc; font-weight: bold; font-size: 13px; text-align: center; pointer-events: none; z-index: 30; box-shadow: 0 0 25px rgba(0,255,204,0.4); max-width: 85%; backdrop-filter: blur(8px); }
 
-        /* JURI DASHBOARD */
         #jury-panel { position: absolute; top: 75px; right: 18px; background: rgba(10, 12, 22, 0.95); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; z-index: 40; display: none; width: 220px; box-shadow: 0 0 25px rgba(0,255,255,0.25); pointer-events: auto; backdrop-filter: blur(8px); }
         .jury-title { font-size: 12px; font-weight: 900; color: #00ffff; text-align: center; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
         .btn-jury { width: 100%; padding: 7px; margin: 3px 0; border-radius: 6px; border: 1px solid #ffaa00; background: #161824; color: #fff; font-weight: bold; font-size: 11px; cursor: pointer; text-align: left; }
         .btn-jury:hover { background: #ffaa00; color: #000; }
 
-        /* TOUCH CONTROLS PLAYER */
         .controls-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; align-items: flex-end; padding: 25px; }
         .dpad-container { pointer-events: auto; display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 5px; opacity: 0.9; }
         .btn-ctrl { background: rgba(18, 20, 32, 0.85); border: 2px solid #00ffcc; color: #fff; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 22px; font-weight: bold; touch-action: manipulation; backdrop-filter: blur(4px); box-shadow: 0 0 10px rgba(0,255,204,0.3); }
@@ -45,7 +45,6 @@
         .btn-autofire { background: rgba(15,20,30,0.8); border: 2px solid #00ff66; color: #00ff66; border-radius: 20px; padding: 6px 14px; font-size: 11px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px); }
         .btn-autofire.active { background: #00ff66; color: #000; box-shadow: 0 0 15px #00ff66; }
 
-        /* MENU UI */
         .modal-screen { position: absolute; inset: 0; background: rgba(2, 3, 8, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
         .menu-title { font-size: calc(2.5vw + 24px); font-weight: 900; color: #00ffcc; text-shadow: 0 0 35px #00ffcc; font-style: italic; margin-bottom: 4px; text-align: center; }
         .menu-sub { font-size: 12px; color: #ffaa00; letter-spacing: 3px; font-weight: bold; margin-bottom: 18px; text-align: center; }
@@ -126,7 +125,7 @@
         <!-- MENU LOBBY UTAMA -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE HD</div>
-            <div class="menu-sub">SUPER HIGH GRAPHICS EDITION</div>
+            <div class="menu-sub">FIREBASE MULTIPLAYER EDITION</div>
 
             <div class="room-box">
                 <div style="font-size: 11px; color: #aaa;">PILIH PERAN KAMU:</div>
@@ -142,7 +141,7 @@
                     <option value="HEAVY">HEAVY (ARMORED TANK)</option>
                 </select>
 
-                <div style="font-size: 11px; color: #aaa; margin-top:6px;">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">MENYIAPKAN...</span></div>
+                <div style="font-size: 11px; color: #aaa; margin-top:6px;">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">HUBUNGKAN FIREBASE...</span></div>
                 
                 <button class="btn-ff" style="width:100%; margin-top:8px;" onclick="createRoom()">👑 BUAT ROOM (HOST)</button>
                 
@@ -181,6 +180,25 @@
     </div>
 
     <script>
+        // ==========================================================
+        // 1. KONFIGURASI FIREBASE (GANTI KREDENSIAL DENGAN MILIK ANDA)
+        // ==========================================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        document.getElementById('peer-status').innerText = "FIREBASE SIAP!";
+
         // AUDIO SYNTHESIZER
         const actx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -253,7 +271,7 @@
             }
         }
 
-        // CANVAS ULTRA HIGH DPI SETUP
+        // CANVAS SETUP
         const cvs = document.getElementById('gameCanvas');
         const ctx = cvs.getContext('2d');
         const INTERNAL_RES = 1200;
@@ -268,11 +286,9 @@
         window.addEventListener('resize', resizeCanvas);
 
         let selectedRole = 'player';
-        let peer = null, mySlot = 0, isHost = false;
-        let connections = [];
-        let hostConn = null;
+        let mySlot = 0, isHost = false, currentRoomCode = "";
         let isAutoFireActive = false;
-        const PREFIX = "TR8-";
+        let roomRef = null;
 
         let currentRound = 1;
         const TOTAL_ROUNDS = 3;
@@ -296,46 +312,115 @@
             document.getElementById('role-jury-btn').classList.toggle('active', role === 'jury');
         }
 
-        function initPeer() {
-            peer = new Peer();
-            peer.on('open', id => { document.getElementById('peer-status').innerText = "SIAP MABAR!"; });
-            peer.on('error', err => { document.getElementById('peer-status').innerText = "ERROR KONEKSI"; });
-        }
-        initPeer();
+        // ==========================================================
+        // 2. SISTEM MULTIPLAYER BERBASIS FIREBASE DATABASE
+        // ==========================================================
 
         function createRoom() {
             let roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            let fullId = PREFIX + roomCode;
-            if(peer) peer.destroy();
-            peer = new Peer(fullId);
+            currentRoomCode = roomCode;
+            isHost = true;
+            mySlot = 0;
 
-            peer.on('open', id => {
-                isHost = true; mySlot = 0;
-                document.getElementById('host-info').style.display = 'block';
-                document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
-                speakIndo(`Room dibuat! Kode ${roomCode}.`);
+            roomRef = db.ref('rooms/' + roomCode);
+
+            // Inisialisasi struktur room di Firebase
+            roomRef.set({
+                status: 'waiting',
+                currentRound: 1,
+                playersCount: 1,
+                events: { type: 'NONE' }
             });
 
-            peer.on('connection', conn => {
-                if(connections.length >= 7) return; 
-                connections.push(conn);
-                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${connections.length + 1}`;
-                let assignedSlot = connections.length;
-                conn.on('open', () => {
-                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, isJury: conn.metadata ? conn.metadata.isJury : false });
-                });
-                conn.on('data', data => handleData(data));
+            // Otomatis hapus room jika Host disconnect
+            roomRef.onDisconnect().remove();
+
+            // Dengarkan perubahan jumlah pemain
+            db.ref(`rooms/${roomCode}/players`).on('value', snapshot => {
+                let players = snapshot.val();
+                let count = players ? Object.keys(players).length : 1;
+                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count}`;
             });
+
+            setupRoomListeners();
+
+            document.getElementById('host-info').style.display = 'block';
+            document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
+            speakIndo(`Room dibuat! Kode ${roomCode}.`);
         }
 
         function joinRoom() {
             let code = document.getElementById('join-room-input').value.trim().toUpperCase();
             if(!code) return alert("Masukkan Kode Room!");
-            let fullId = PREFIX + code; isHost = false;
-            if(!peer) peer = new Peer();
-            hostConn = peer.connect(fullId, { metadata: { isJury: (selectedRole === 'jury') } });
-            hostConn.on('open', () => { speakIndo("Terhubung ke Host!"); });
-            hostConn.on('data', data => handleData(data));
+            currentRoomCode = code;
+            isHost = false;
+
+            roomRef = db.ref('rooms/' + code);
+
+            roomRef.once('value', snapshot => {
+                if(!snapshot.exists()) {
+                    alert("Room tidak ditemukan!");
+                    return;
+                }
+
+                db.ref(`rooms/${code}/players`).once('value', pSnap => {
+                    let players = pSnap.val() || {};
+                    let occupiedSlots = Object.keys(players);
+                    
+                    // Mencari slot kosong (0-7)
+                    for(let i=1; i<8; i++) {
+                        if(!occupiedSlots.includes(i.toString())) {
+                            mySlot = i;
+                            break;
+                        }
+                    }
+
+                    db.ref(`rooms/${code}/players/${mySlot}`).set({
+                        role: selectedRole,
+                        active: true
+                    });
+
+                    db.ref(`rooms/${code}/players/${mySlot}`).onDisconnect().remove();
+
+                    if(selectedRole === 'player') {
+                        document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
+                    }
+
+                    setupRoomListeners();
+                    speakIndo("Berhasil masuk ke Room " + code);
+                });
+            });
+        }
+
+        function setupRoomListeners() {
+            // Dengarkan Events Global (Start Match, Shake, Jury Voice, Fire, Posisi)
+            roomRef.child('events').on('value', snapshot => {
+                let data = snapshot.val();
+                if(!data) return;
+                handleData(data);
+            });
+
+            // Dengarkan Gerakan Posisi Pemain Lain
+            roomRef.child('positions').on('child_changed', snapshot => {
+                let data = snapshot.val();
+                if(data && data.slot !== mySlot) {
+                    if(tanks[data.slot]) {
+                        tanks[data.slot].x = data.x;
+                        tanks[data.slot].y = data.y;
+                        tanks[data.slot].angle = data.angle;
+                        tanks[data.slot].weapon = data.weapon || tanks[data.slot].weapon;
+                    }
+                }
+            });
+        }
+
+        function broadcast(data) {
+            if(!roomRef) return;
+            if(data.type === 'SYNC_POS') {
+                db.ref(`rooms/${currentRoomCode}/positions/${data.slot}`).set(data);
+            } else {
+                roomRef.child('events').set(data);
+            }
         }
 
         function startOnlineMatch() {
@@ -343,11 +428,6 @@
             currentRound = 1;
             broadcast({ type: 'START_MATCH', round: 1 });
             initFullMatch();
-        }
-
-        function broadcast(data) {
-            if(isHost) connections.forEach(c => c.send(data));
-            else if(hostConn) hostConn.send(data);
         }
 
         function triggerJuryVoice(text) {
@@ -360,27 +440,16 @@
             shakeScreen();
         }
 
-        // GETARAN DITURUNKAN SECARA DRASTIS
         let shakeTime = 0;
-        function shakeScreen() { shakeTime = 5; } // Durasi getaran sangat singkat dan halus
+        function shakeScreen() { shakeTime = 5; }
 
         function handleData(data) {
-            if(data.type === 'INIT_SLOT') {
-                mySlot = data.slot;
-                if(selectedRole === 'player') document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
-            } else if(data.type === 'START_MATCH') {
+            if(data.type === 'START_MATCH') {
                 currentRound = data.round || 1; initFullMatch();
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
-            } else if(data.type === 'SYNC_POS') {
-                if(tanks[data.slot]) {
-                    tanks[data.slot].x = data.x;
-                    tanks[data.slot].y = data.y;
-                    tanks[data.slot].angle = data.angle;
-                    tanks[data.slot].weapon = data.weapon || tanks[data.slot].weapon;
-                }
             } else if(data.type === 'FIRE') {
-                if(tanks[data.slot]) fire(tanks[data.slot], false);
+                if(tanks[data.slot] && data.slot !== mySlot) fire(tanks[data.slot], false);
             } else if(data.type === 'JURY_VOICE') {
                 speakIndo(data.text);
             } else if(data.type === 'SHAKE') {
@@ -447,12 +516,11 @@
 
         function initFullMatch() {
             currentRound = 1;
-            let activeHumanCount = isHost ? (connections.length + 1) : 1;
             let chosenClass = document.getElementById('class-select').value;
 
             tanks = [];
             for(let i=0; i<8; i++) {
-                let isBot = (i >= activeHumanCount);
+                let isBot = (i !== mySlot && !isHost);
                 let cStats = getClassStats(isBot ? 'MEDIUM' : chosenClass);
 
                 tanks.push({
@@ -622,12 +690,12 @@
                 });
             }
 
-            if(isLocal && selectedRole === 'player' && !t.isBot) broadcast({ type: 'FIRE', slot: mySlot });
+            if(isLocal && selectedRole === 'player') broadcast({ type: 'FIRE', slot: mySlot });
         }
 
         function addBoom(x, y, color, sizeMultiplier = 1) {
             playSound('boom');
-            shakeScreen(); // Shake minim
+            shakeScreen();
             let pCount = Math.floor(20 * sizeMultiplier);
             for(let i=0; i<pCount; i++) {
                 particles.push({
@@ -704,7 +772,7 @@
 
             if(selectedRole === 'player') {
                 let p = tanks[mySlot];
-                if(p && p.alive && !p.isBot) {
+                if(p && p.alive) {
                     let ax = 0, ay = 0;
                     let hasInput = false;
 
@@ -877,7 +945,7 @@
             });
         }
 
-        // ENGINE RENDER ULTRA HD (SUPER GRAPHICS & BLOOM)
+        // RENDER ENGINE
         function drawTank(t) {
             if(!t.alive) return;
 
@@ -892,18 +960,15 @@
             ctx.save();
             ctx.translate(t.x + S/2, t.y + S/2);
 
-            // Soft Dynamic Shadow (Ultra Realistic)
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
             ctx.beginPath(); ctx.ellipse(0, 10, S/2.2, S/3.2, 0, 0, Math.PI*2); ctx.fill();
 
-            // Shield Aura Glow HD
             if(t.shieldTimer > 0) {
                 ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
                 ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 18;
                 ctx.beginPath(); ctx.arc(0, 0, S/2 + 6, 0, Math.PI*2); ctx.stroke();
             }
 
-            // Weapon Glow
             if(t.weapon !== 'NORMAL') {
                 ctx.strokeStyle = t.color; ctx.lineWidth = 2.5;
                 ctx.shadowColor = t.color; ctx.shadowBlur = 16;
@@ -912,7 +977,6 @@
 
             ctx.rotate(t.angle * Math.PI / 180);
 
-            // TANK TRACKS (DESAIN METALLIC HD)
             ctx.fillStyle = '#0a0d14';
             ctx.fillRect(-S/2+4, -S/2+2, 16, S-4); 
             ctx.fillRect(S/2-20, -S/2+2, 16, S-4);
@@ -923,22 +987,18 @@
                 ctx.fillRect(S/2-20, i, 16, 2.5);
             }
 
-            // BADAN TANK (SUPER GLOW NEON EFFECT)
             ctx.fillStyle = t.color;
             ctx.shadowColor = t.color; ctx.shadowBlur = 12;
             ctx.beginPath(); ctx.roundRect(-S/2+14, -S/2+8, S-28, S-16, 8); ctx.fill();
 
-            // INNER COCKPIT
             ctx.fillStyle = '#030509';
             ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
 
-            // CANNON BARREL
             ctx.fillStyle = t.color;
             ctx.fillRect(0, -5, S/2 + 6, 10);
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(S/2+2, -3, 4, 6);
 
-            // FLASH FIRE HD
             if(t.muzzleFlash > 0) {
                 ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 25;
                 ctx.beginPath(); ctx.arc(S/2 + 10, 0, 14, 0, Math.PI*2); ctx.fill();
@@ -946,7 +1006,6 @@
 
             ctx.restore();
 
-            // HP BAR HD
             ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(t.x+6, t.y-16, S-12, 5);
             ctx.fillStyle = t.color; ctx.shadowColor = t.color; ctx.shadowBlur = 6;
             ctx.fillRect(t.x+6, t.y-16, ((S-12) * Math.max(0, t.hp)) / t.maxHp, 5);
@@ -961,7 +1020,6 @@
         function draw() {
             ctx.save();
             
-            // GETARAN DIKURANGI AGAR TIDAK PUSING (Getharan Sangat Halus)
             if(shakeTime > 0) {
                 shakeTime--;
                 ctx.translate((Math.random()-0.5)*3, (Math.random()-0.5)*3); 
@@ -969,7 +1027,6 @@
 
             ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
-            // MAP GRID ULTRA HIGH GRAPHICS
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     let x = c*S, y = r*S;
@@ -990,7 +1047,6 @@
                 }
             }
 
-            // POWERUPS ULTRA GLOW
             powerups.forEach(pw => {
                 pw.floatOffset += 0.05;
                 let floatY = pw.y + Math.sin(pw.floatOffset) * 4;
@@ -1004,10 +1060,8 @@
                 ctx.fillText(icon, pw.x, floatY+4);
             });
 
-            // DRAW TANKS
             tanks.forEach(drawTank);
 
-            // BUSHES
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     if(map[r][c] === 3) {
@@ -1017,7 +1071,6 @@
                 }
             }
 
-            // BULLETS ULTRA GLOW
             bullets.forEach(b => {
                 ctx.fillStyle = '#ffffff'; 
                 ctx.shadowColor = b.c; 
@@ -1025,7 +1078,6 @@
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill();
             });
 
-            // PARTICLES EXPLOSION HD
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.life -= 0.035;
