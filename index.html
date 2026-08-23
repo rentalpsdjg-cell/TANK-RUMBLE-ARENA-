@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FIX POWER-UP SYNC</title>
+    <title>TANK RUMBLE VIP - FIX POWER-UP SYNC & LERP SMOOTH</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -396,6 +396,7 @@
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
         let isAutoFire = true;
+        let lastNetworkSend = 0; // Timer untuk Tick Rate 20Hz (50ms)
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
@@ -533,6 +534,7 @@
             else if(hostConn && hostConn.open) hostConn.send(data);
         }
 
+        // --- NETWORK HANDLER (PERBAIKAN SMOOTH LERP) ---
         function handleData(data) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
@@ -543,8 +545,11 @@
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
             } else if(data.type === 'SYNC_POS') {
-                if(tanks[data.slot]) {
-                    tanks[data.slot].x = data.x; tanks[data.slot].y = data.y; tanks[data.slot].angle = data.angle;
+                if(tanks[data.slot] && data.slot !== mySlot) {
+                    // Update target koordinat & sudut (Bukan langsung dipindah)
+                    tanks[data.slot].targetX = data.x; 
+                    tanks[data.slot].targetY = data.y; 
+                    tanks[data.slot].targetAngle = data.angle;
                 }
             } else if(data.type === 'FIRE') {
                 if(tanks[data.slot]) fire(tanks[data.slot], false);
@@ -635,6 +640,7 @@
                 tanks.push({
                     id: i, isBot: isBot, name: isBot ? `BOT ${i+1}` : `P${i+1}`,
                     x: 0, y: 0, angle: 90,
+                    targetX: 0, targetY: 0, targetAngle: 90, // Variabel interpolasi
                     color: i === mySlot && !isSpectator ? selectedColor : defaultColors[i % defaultColors.length],
                     hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
                     spd: (2.5 + (i===mySlot && !isSpectator ? stats.spd*0.4 : 0.4)) * (isBot ? botSpdMulti : 1),
@@ -656,7 +662,13 @@
             ];
 
             tanks.forEach((t, i) => {
-                t.x = spawnCoords[i%8].x * S; t.y = spawnCoords[i%8].y * S; t.angle = spawnCoords[i%8].angle;
+                let sx = spawnCoords[i%8].x * S;
+                let sy = spawnCoords[i%8].y * S;
+                let sa = spawnCoords[i%8].angle;
+
+                t.x = sx; t.y = sy; t.angle = sa;
+                t.targetX = sx; t.targetY = sy; t.targetAngle = sa; // Reset target LERP
+
                 t.hp = t.maxHp; t.alive = true; t.activePowerUp = null; t.powerUpTimer = 0; t.shieldTimer = 0;
             });
 
@@ -857,6 +869,7 @@
             }
         }
 
+        // --- GAME LOOP & UPDATER ---
         function update() {
             if(isGameOver) return;
 
@@ -866,6 +879,7 @@
                 if(powerUps.length < 4) spawnPowerUp();
             }
 
+            // 1. KONTROL TANK SENDIRI
             if(!isSpectator) {
                 let p = tanks[mySlot];
                 if(p && p.alive) {
@@ -880,13 +894,32 @@
 
                     if(moved && !checkWallCollision(nextX, nextY)) {
                         p.x = nextX; p.y = nextY;
-                        if(!isBotMode) broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
+                        
+                        // BROADCAST HANYA TIAP 50ms (TICK RATE 20Hz)
+                        let now = Date.now();
+                        if(!isBotMode && now - lastNetworkSend > 50) {
+                            lastNetworkSend = now;
+                            broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
+                        }
                     }
                 }
             }
 
+            // 2. INTERPOLASI (LERP) UNTUK TANK NETWORK / LAWAN
             tanks.forEach(t => { 
-                if(t.isBot) updateBotLogic(t); 
+                if(t.isBot) {
+                    updateBotLogic(t);
+                } else if(t.id !== mySlot && t.alive) {
+                    // Muluskan Posisi (Lerp 0.25)
+                    t.x += (t.targetX - t.x) * 0.25;
+                    t.y += (t.targetY - t.y) * 0.25;
+
+                    // Muluskan Rotasi
+                    let diff = t.targetAngle - t.angle;
+                    if (diff > 180) diff -= 360;
+                    if (diff < -180) diff += 360;
+                    t.angle += diff * 0.3;
+                }
 
                 if(t.powerUpTimer > 0) {
                     t.powerUpTimer--;
@@ -914,6 +947,7 @@
                 }
             });
 
+            // 3. LOGIKA PELURU
             for(let i=bullets.length-1; i>=0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
