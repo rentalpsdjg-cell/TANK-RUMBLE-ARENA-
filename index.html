@@ -1,975 +1,940 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIMAK v2.6 - PORTAL E-GURU SMART MULTIUSER</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root { --primary: #1e3a8a; --bg: #f8fafc; }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: #1e293b; -webkit-tap-highlight-color: transparent; }
-    .panel { display: none; }
-    .panel.active { display: block; animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
-    /* Aturan Cetak CSS Khusus */
-    @media print {
-      .no-print { display: none !important; }
-      body { background: white; color: black; padding: 0; margin: 0; }
-      #main-sidebar, #main-header, .tab-nav, button { display: none !important; }
-      #matrix-preview-container { border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
-      table { width: 100% !important; border-collapse: collapse !important; font-size: 8px !important; }
-      th, td { border: 1px solid #000 !important; padding: 3px !important; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TANK RUMBLE: ARENA 8</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; }
+        
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: #050505; }
+        canvas { background: #0a0a0c; border: 2px solid #ff4400; box-shadow: 0 0 30px rgba(255, 68, 0, 0.4); max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* HUD ATAS */
+        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 10px 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent); }
+        .hud-card { background: rgba(0,0,0,0.85); border: 1px solid #ffaa00; padding: 6px 12px; border-radius: 8px; backdrop-filter: blur(4px); pointer-events: auto; }
+        .hp-bar-bg { width: 120px; height: 12px; background: #222; border: 1px solid #fff; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+        .hp-bar-fill { height: 100%; background: #00ff66; width: 100%; transition: width 0.1s; }
+
+        .btn-hud-action { background: #222; color: #ffaa00; border: 1px solid #ffaa00; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; pointer-events: auto; margin-right: 5px; }
+        .btn-hud-action:hover { background: #ffaa00; color: #000; }
+        .btn-hud-exit { background: #cc0000; color: #fff; border: 1px solid #ff0055; }
+
+        /* KOMENTATOR BOX */
+        #commentator-box { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid #ffaa00; padding: 8px 20px; border-radius: 20px; color: #ffea00; font-weight: bold; font-size: 14px; text-align: center; pointer-events: none; z-index: 30; box-shadow: 0 0 15px rgba(255,170,0,0.5); max-width: 90%; }
+
+        /* JURI DASHBOARD */
+        #jury-panel { position: absolute; top: 70px; right: 15px; background: rgba(15, 15, 20, 0.95); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; z-index: 40; display: none; width: 220px; box-shadow: 0 0 20px rgba(0,255,255,0.3); pointer-events: auto; }
+        .jury-title { font-size: 13px; font-weight: 900; color: #00ffff; text-align: center; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        .btn-jury { width: 100%; padding: 6px; margin: 3px 0; border-radius: 6px; border: 1px solid #ffaa00; background: #222; color: #fff; font-weight: bold; font-size: 11px; cursor: pointer; text-align: left; }
+        .btn-jury:hover { background: #ffaa00; color: #000; }
+
+        /* TOUCH CONTROLS PLAYER */
+        .controls-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; display: flex; justify-content: space-between; align-items: flex-end; padding: 20px 20px; }
+        .dpad-container { pointer-events: auto; display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px); gap: 4px; opacity: 0.85; }
+        .btn-ctrl { background: rgba(30, 30, 30, 0.8); border: 2px solid #ffaa00; color: #fff; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; touch-action: manipulation; }
+        .btn-ctrl:active { background: #ffaa00; color: #000; }
+        
+        .fire-container { pointer-events: auto; margin-bottom: 5px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .btn-fire-ff { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #ff0000, #990000); border: 3px solid #ffaa00; color: #fff; font-size: 16px; font-weight: 900; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(255,0,0,0.7); touch-action: manipulation; cursor: pointer; }
+        .btn-autofire { background: #222; border: 2px solid #00ff66; color: #00ff66; border-radius: 20px; padding: 6px 14px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .btn-autofire.active { background: #00ff66; color: #000; box-shadow: 0 0 10px #00ff66; }
+
+        /* MENU UI */
+        .modal-screen { position: absolute; inset: 0; background: rgba(5, 5, 8, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(10px); }
+        .menu-title { font-size: calc(2.5vw + 20px); font-weight: 900; color: #ffaa00; text-shadow: 0 0 25px #ff4400; font-style: italic; margin-bottom: 5px; text-align: center; }
+        .menu-sub { font-size: 13px; color: #ff3300; letter-spacing: 3px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        
+        .room-box { background: rgba(20,20,20,0.8); border: 2px solid #ffaa00; padding: 15px; border-radius: 12px; margin-bottom: 12px; width: 90%; max-width: 360px; text-align: center; }
+        .room-box input, .room-box select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ffaa00; background: #000; color: #00ff66; font-size: 13px; text-align: center; font-weight: bold; margin-top: 5px; text-transform: uppercase; }
+
+        .role-selector { display: flex; justify-content: space-between; margin-top: 5px; gap: 8px; }
+        .role-btn { flex: 1; padding: 6px; background: #111; border: 2px solid #555; color: #aaa; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; }
+        .role-btn.active { border-color: #00ff66; color: #00ff66; background: rgba(0,255,102,0.1); }
+
+        .btn-ff { width: 80%; max-width: 320px; padding: 12px; margin: 5px; border-radius: 10px; border: none; background: linear-gradient(135deg, #ffaa00, #ff4400); color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 6px 20px rgba(255, 68, 0, 0.4); text-transform: uppercase; }
+        .btn-sub { background: #222; border: 2px solid #ffaa00; color: #ffaa00; }
+        .btn-start { background: linear-gradient(135deg, #00ff66, #009933); color: #000; }
+        .btn-reset { background: linear-gradient(135deg, #cc0000, #ff0055); }
+
+        .room-code-display { background: #111; border: 2px dashed #00ff66; border-radius: 8px; padding: 8px; margin: 8px 0; font-size: 18px; font-weight: 900; color: #00ff66; letter-spacing: 2px; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin: 10px 0; color: #fff; font-size: 12px; }
+        .leaderboard-table th, .leaderboard-table td { border: 1px solid #444; padding: 6px; text-align: center; }
+        .leaderboard-table th { background: #ffaa00; color: #000; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col md:flex-row relative overflow-x-hidden">
+<body>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyN4cUNE6PMwPlPZvsYLrh4homfsVhJFKHj0ceUkX0B9AEP71BDd0_uaBl-IxpCyr3Y/exec";
-  </script>
+    <div id="game-container">
+        <!-- HUD ATAS -->
+        <div class="hud-layer">
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">🚪 EXIT</button>
+                <button class="btn-hud-action" onclick="resetOnlineRoom()">🔄 RESET ROOM</button>
+                <button class="btn-hud-action" onclick="toggleFullscreen()">📺 FULL</button>
+                
+                <div class="hud-card" id="my-player-hud">
+                    <div style="color:#00ffff; font-size:11px; font-weight:bold;" id="player-id-tag">P1 (KAMU)</div>
+                    <div style="font-size:11px; font-weight:900;">KILLS: <span id="p1-kills" style="color:#ffaa00;">0</span> | WEAPON: <span id="p1-weapon" style="color:#00ff66; text-shadow:0 0 5px currentColor;">NORMAL</span></div>
+                    <div style="font-size:10px; color:#ffea00;" id="p1-buffs">BUFF: NONE</div>
+                    <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
+                </div>
+            </div>
 
-  <!-- Overlay untuk Sidebar Mobile -->
-  <div id="sidebar-overlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 hidden md:hidden"></div>
-
-  <div id="global-loader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden">
-    <div class="bg-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 border border-slate-100">
-      <i class="fa-solid fa-circle-notch fa-spin text-blue-700 text-xl"></i>
-      <span class="text-sm font-bold text-slate-700">Memproses Cloud Data...</span>
-    </div>
-  </div>
-
-  <!-- Sidebar responsif dengan status transform mobile -->
-  <aside id="main-sidebar" class="no-print bg-slate-900 text-slate-300 w-64 shrink-0 flex flex-col border-r border-slate-800 fixed md:sticky top-0 bottom-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out h-full">
-    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-md">S</div>
-        <div>
-          <h1 class="text-xs font-black text-white tracking-wider">SIMAK CLOUD</h1>
-          <p class="text-[10px] text-slate-500 font-semibold">Engine Version 2.6</p>
+            <div class="hud-card" style="text-align:right;">
+                <div style="color:#aaa; font-size:11px; font-weight:bold;">SISA TANK</div>
+                <div id="alive-count" style="font-size:20px; font-weight:900; color:#00ff66;">8</div>
+            </div>
         </div>
-      </div>
-      <!-- Tombol Tutup di Mobile -->
-      <button onclick="toggleSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-1">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-    </div>
-    
-    <nav class="p-3 flex flex-col gap-1 overflow-y-auto grow no-scrollbar">
-      <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-3 mt-2 mb-1">Menu Utama</p>
-      <button onclick="switchPanel('dashboard')" class="nav-btn active flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-chart-pie w-4"></i>Dashboard</button>
-      <button onclick="switchPanel('absensi')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-user-check w-4"></i>Presensi Kelas</button>
-      <button onclick="switchPanel('nilai')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-graduation-cap w-4"></i>Daftar Nilai</button>
-      <button onclick="switchPanel('agenda')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-book-open w-4"></i>Jurnal Agenda</button>
-      <button onclick="switchPanel('bk')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-handshake-angle w-4"></i>Kasus BK</button>
-      
-      <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-3 mt-4 mb-1">Arsip & Laporan</p>
-      <button onclick="switchPanel('rekap-log')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-clock-rotate-left w-4"></i>Log Bulanan</button>
-      <button onclick="switchPanel('rekap-matrix')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-table-cells w-4"></i>Cetak Laporan Matrix</button>
-      
-      <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-3 mt-4 mb-1">Utilitas Sistem</p>
-      <button onclick="switchPanel('upload-massal')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-users-line w-4"></i>Upload Siswa Massal</button>
-      <button onclick="switchPanel('master')" class="nav-btn flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-xs font-semibold text-left w-full hover:bg-slate-800 transition"><i class="fa-solid fa-sliders w-4"></i>Kelola Master Data</button>
-    </nav>
-  </aside>
 
-  <main class="grow flex flex-col min-w-0 w-full">
-    <!-- Header responsif dengan Trigger Hamburger & Tombol Refresh -->
-    <header id="main-header" class="no-print bg-white border-b border-slate-200 h-14 flex items-center px-4 md:px-6 justify-between shrink-0 shadow-xs sticky top-0 z-20">
-      <div class="flex items-center gap-3">
-        <!-- Tombol Hamburger Menu Mobile -->
-        <button onclick="toggleSidebar(true)" class="md:hidden text-slate-600 hover:text-slate-900 p-1 cursor-pointer">
-          <i class="fa-solid fa-bars text-lg"></i>
-        </button>
-        <h2 id="header-title" class="text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wide truncate max-w-[160px] sm:max-w-none">Dashboard Utama</h2>
-      </div>
-      <div class="flex items-center gap-2">
-        <!-- Tombol Refresh Terintegrasi -->
-        <button onclick="initMasterDatabase()" title="Refresh Data Cloud" class="text-slate-600 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 p-2 rounded-full border border-slate-200 cursor-pointer transition flex items-center justify-center">
-          <i class="fa-solid fa-sync text-xs md:text-sm"></i>
-        </button>
-        <div id="header-user" class="text-[10px] md:text-xs font-bold text-slate-600 bg-slate-100 px-2.5 md:px-3 py-1.5 rounded-full border border-slate-200 flex items-center">
-          <i class="fa-solid fa-wifi text-emerald-600 mr-1.5 animate-pulse"></i><span class="hidden sm:inline">Cloud Connected</span><span class="sm:hidden">Online</span>
+        <!-- PANEL JURI / WASIT -->
+        <div id="jury-panel">
+            <div class="jury-title">⚖️ PANEL KONTROL JURI</div>
+            <button class="btn-jury" onclick="triggerJuryVoice('Mode AI Bot Agresif!')">🎙️ "AI Agresif"</button>
+            <button class="btn-jury" onclick="triggerJuryVoice('Powerup Suplai Diturunkan!')">🎙️ "Suplai Senjata!"</button>
+            <button class="btn-jury" onclick="triggerShakeArena()">⚡ Gempa Arena</button>
+            <button class="btn-jury" style="border-color:#ff0055; color:#ff0055; margin-top:8px;" onclick="resetOnlineRoom()">🔄 RESET ROOM ONLINE</button>
         </div>
-      </div>
-    </header>
 
-    <div class="p-4 md:p-6 grow overflow-y-auto">
-      
-      <section id="panel-dashboard" class="panel active">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:grid-cols-2 md:gap-4 mb-6">
-          <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-xs">
-            <p class="text-[10px] md:text-xs text-slate-500 font-semibold uppercase truncate">Database Kelas</p>
-            <h3 id="dash-total-kelas" class="text-xl md:text-2xl font-black text-slate-800 mt-1">0</h3>
-          </div>
-          <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-xs">
-            <p class="text-[10px] md:text-xs text-slate-500 font-semibold uppercase truncate">Guru Aktif</p>
-            <h3 id="dash-total-guru" class="text-xl md:text-2xl font-black text-slate-800 mt-1">0</h3>
-          </div>
-          <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-xs">
-            <p class="text-[10px] md:text-xs text-slate-500 font-semibold uppercase truncate">Mata Pelajaran</p>
-            <h3 id="dash-total-mapel" class="text-xl md:text-2xl font-black text-slate-800 mt-1">0</h3>
-          </div>
-          <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-xs">
-            <p class="text-[10px] md:text-xs text-slate-500 font-semibold uppercase truncate">Siswa Terdaftar</p>
-            <h3 id="dash-total-siswa" class="text-xl md:text-2xl font-black text-slate-800 mt-1">0</h3>
-          </div>
+        <!-- BOX KOMENTATOR INDO -->
+        <div id="commentator-box">🎙️ KOMENTATOR: Menunggu Match Dimulai...</div>
+
+        <canvas id="gameCanvas" width="1200" height="1200"></canvas>
+
+        <!-- KONTROL TOUCH PLAYER -->
+        <div class="controls-overlay" id="player-controls">
+            <div class="dpad-container">
+                <div></div><div class="btn-ctrl" id="btn-u">▲</div><div></div>
+                <div class="btn-ctrl" id="btn-l">◀</div><div></div><div class="btn-ctrl" id="btn-r">▶</div>
+                <div></div><div class="btn-ctrl" id="btn-d">▼</div><div></div>
+            </div>
+
+            <div class="fire-container">
+                <button class="btn-autofire" id="btn-autofire-toggle" onclick="toggleAutoFire()">🔥 AUTO FIRE: OFF</button>
+                <div class="btn-fire-ff" id="btn-f">🎯 FIRE</div>
+            </div>
         </div>
-        <div class="bg-blue-950 text-slate-100 p-5 md:p-6 rounded-2xl border border-blue-900 shadow-md">
-          <h4 class="text-xs md:text-sm font-bold mb-1"><i class="fa-solid fa-rocket mr-2 text-amber-400"></i>Selamat Datang di SIMAK v2.6 Cloud Engine</h4>
-          <p class="text-[11px] md:text-xs text-slate-300 leading-relaxed max-w-2xl">Gunakan portal administrasi cerdas berbasis awan ini untuk mempermudah koordinasi guru, mengunci absensi presensi harian, memberikan rekapitulasi nilai massal, serta mencetak lembar matrix laporan secara instan.</p>
-        </div>
-      </section>
 
-      <section id="panel-absensi" class="panel">
-        <div class="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-xs mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tanggal Kegiatan</label>
-              <input type="date" id="abs-tanggal" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Kelas</label>
-              <select id="abs-kelas" onchange="loadSiswaUntukAbsen()" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
-              <select id="abs-mapel" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Guru / Instruktur</label>
-              <select id="abs-guru" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Jenis Layanan Kegiatan</label>
-              <select id="abs-kegiatan" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-amber-50 text-amber-900 font-bold focus:outline-none">
-                <option value="submitAbsensi">KBM Harian</option>
-                <option value="submitPramuka">Pramuka Wajib</option>
-                <option value="submitSholat">Sholat Berjamaah</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center bg-slate-50">
-            <h5 class="text-xs font-bold text-slate-700 uppercase">Lembar Absensi Peserta Didik</h5>
-            <div class="flex gap-1 text-[11px] w-full sm:w-auto">
-              <button onclick="setGlobalStatus('H')" class="w-full sm:w-auto text-center px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-md cursor-pointer">Semua Hadir (H)</button>
-            </div>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[500px]">
-              <thead>
-                <tr class="bg-slate-100 text-slate-600 font-bold text-[11px] uppercase border-b border-slate-200">
-                  <th class="p-3 text-center w-12">No</th>
-                  <th class="p-3">Nama Lengkap Siswa</th>
-                  <th class="p-3 text-center w-56">Opsi Kehadiran</th>
-                </tr>
-              </thead>
-              <tbody id="container-siswa-absen" class="divide-y divide-slate-200 text-xs">
-                <tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Silakan pilih kelas terlebih dahulu untuk menarik data siswa cloud...</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="p-4 bg-slate-50 border-t border-slate-100 text-right">
-            <button onclick="submitAbsensiCloud()" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-5 py-3 sm:py-2.5 rounded-lg shadow-sm cursor-pointer"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Kunci & Kirim Presensi Harian</button>
-          </div>
-        </div>
-      </section>
+        <!-- MENU LOBBY UTAMA -->
+        <div id="menu-screen" class="modal-screen">
+            <div class="menu-title">TANK RUMBLE: ARENA 8</div>
+            <div class="menu-sub">ULTIMATE MULTIPLAYER EDITION</div>
 
-      <section id="panel-nilai" class="panel">
-        <div class="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-xs mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Tugas / Ulangan</label>
-              <input type="text" id="nil-tugas" placeholder="Contoh: UH-1 Fungsi Invers" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Kelas Target</label>
-              <select id="nil-kelas" onchange="loadSiswaUntukNilai()" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
-              <select id="nil-mapel" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Guru Pengampu</label>
-              <select id="nil-guru" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div class="flex items-end">
-              <button onclick="setGlobalNilai()" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs p-2.5 md:p-2 rounded-lg cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Set Nilai (80)</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[450px]">
-              <thead>
-                <tr class="bg-slate-100 text-slate-600 font-bold text-[11px] uppercase border-b border-slate-200">
-                  <th class="p-3 text-center w-12">No</th>
-                  <th class="p-3">Nama Lengkap Siswa</th>
-                  <th class="p-3 text-center w-36">Input Skor Nilai (0-100)</th>
-                </tr>
-              </thead>
-              <tbody id="container-siswa-nilai" class="divide-y divide-slate-200 text-xs">
-                <tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Pilih kelas target untuk memasukkan daftar nilai massal...</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="p-4 bg-slate-50 border-t border-slate-100 text-right">
-            <button onclick="submitNilaiCloud()" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-5 py-3 sm:py-2.5 rounded-lg shadow-sm cursor-pointer"><i class="fa-solid fa-floppy-disk mr-2"></i>Simpan & Unggah Nilai Massal</button>
-          </div>
-        </div>
-      </section>
+            <div class="room-box">
+                <div style="font-size: 11px; color: #aaa;">PILIH PERAN KAMU:</div>
+                <div class="role-selector">
+                    <button class="role-btn active" id="role-player-btn" onclick="selectRole('player')">🎮 PEMAIN</button>
+                    <button class="role-btn" id="role-jury-btn" onclick="selectRole('jury')">⚖️ JURI / WASIT</button>
+                </div>
 
-      <section id="panel-agenda" class="panel">
-        <div class="max-w-2xl bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-xs">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tanggal Agenda</label>
-              <input type="date" id="age-tanggal" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Kelas Mengajar</label>
-              <select id="age-kelas" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Materi / Bahasan Pokok KBM</label>
-            <input type="text" id="age-materi" placeholder="Uraikan bahasan pokok KBM harian" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status Kelas</label>
-              <select id="age-status" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="Kondusif / Lancar">Kondusif / Lancar</option>
-                <option value="Ada Kendala Teknik">Ada Kendala Teknik</option>
-                <option value="Guru Piket / Tugas">Guru Piket / Tugas</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Jumlah Siswa Hadir</label>
-              <input type="number" id="age-hadir" value="30" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Jumlah Siswa Absen</label>
-              <input type="number" id="age-absen" value="0" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-          </div>
-          <div class="mb-5">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Guru / Pengajar Jurnal</label>
-            <select id="age-guru" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-          </div>
-          <button onclick="submitAgendaCloud()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs py-3 rounded-lg shadow-sm cursor-pointer"><i class="fa-solid fa-journal-whills mr-2"></i>Kunci Jurnal Agenda Mengajar</button>
-        </div>
-      </section>
+                <div style="font-size: 11px; color: #aaa; margin-top:8px;">PILIH CLASS TANK:</div>
+                <select id="class-select">
+                    <option value="MEDIUM">MEDIUM (HP: 200 | SPEED: SEDANG)</option>
+                    <option value="LIGHT">LIGHT (HP: 130 | SPEED: CEPAT)</option>
+                    <option value="HEAVY">HEAVY (HP: 320 | SPEED: LAMBAT)</option>
+                </select>
 
-      <section id="panel-bk" class="panel">
-        <div class="max-w-2xl bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-xs">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tanggal Kasus</label>
-              <input type="date" id="bk-tanggal" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Kelas</label>
-              <select id="bk-kelas" onchange="loadSiswaUntukBK()" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Siswa Terkait</label>
-              <select id="bk-siswa" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="">-- Pilih Kelas Terlebih Dahulu --</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Kategori Layanan Kasus</label>
-              <select id="bk-kategori" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="Pelanggaran Kedisiplinan">Pelanggaran Kedisiplinan</option>
-                <option value="Keterlambatan Masuk Sekolah">Keterlambatan Masuk Sekolah</option>
-                <option value="Atribut / Seragam Tidak Lengkap">Atribut / Seragam Tidak Lengkap</option>
-                <option value="Bimbingan Konseling Motivasi Belajar">Bimbingan Konseling Motivasi Belajar</option>
-              </select>
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Uraian Masalah / Pelanggaran</label>
-            <textarea id="bk-masalah" rows="2" placeholder="Uraikan secara detail masalah/kejadian di lapangan..." class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></textarea>
-          </div>
-          <div class="mb-4">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Solusi / Tindak Lanjut</label>
-            <textarea id="bk-solusi" rows="2" placeholder="Uraikan keputusan solusi atau kesepakatan tindak lanjut..." class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></textarea>
-          </div>
-          <div class="mb-5">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Guru / Konselor Penanggung Jawab</label>
-            <select id="bk-guru" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-          </div>
-          <button onclick="submitBKCloud()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs py-3 rounded-lg shadow-sm cursor-pointer"><i class="fa-solid fa-shield-halved mr-2"></i>Kunci & Simpan Catatan BK</button>
-        </div>
-      </section>
+                <div style="font-size: 11px; color: #aaa; margin-top:8px;">PILIH ARENA PERTANDINGAN:</div>
+                <select id="map-select">
+                    <option value="0">ARENA 1: KLASIK BLOCK</option>
+                    <option value="1">ARENA 2: LABIRIN & SEMAK (MAZE)</option>
+                    <option value="2">ARENA 3: BINTANG & AREA ES</option>
+                    <option value="3">ARENA 4: TERBUKA (OPEN FIELD)</option>
+                </select>
 
-      <section id="panel-rekap-log" class="panel">
-        <div class="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-xs mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Database Log</label>
-              <select id="log-menu" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="KBM Harian">Log Presensi KBM</option>
-                <option value="Pramuka">Log Presensi Pramuka</option>
-                <option value="Sholat">Log Presensi Sholat</option>
-                <option value="Daftar Nilai Tugas">Log Nilai Siswa</option>
-                <option value="Agenda">Log Jurnal Agenda</option>
-                <option value="BK">Log Catatan BK</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filter Kelas</label>
-              <select id="log-kelas" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="">Semua Kelas</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Bulan</label>
-              <select id="log-bulan" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="1">Januari</option><option value="2">Februari</option><option value="3">Maret</option>
-                <option value="4">April</option><option value="5">Mei</option><option value="6" selected>Juni</option>
-                <option value="7">Juli</option><option value="8">Agustus</option><option value="9">September</option>
-                <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tahun</label>
-              <select id="log-tahun" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
-              </select>
-            </div>
-            <div class="flex items-end">
-              <button onclick="fetchMonthlyLogDashboard()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs p-2.5 md:p-2 rounded-lg shadow-xs cursor-pointer"><i class="fa-solid fa-magnifying-glass mr-1"></i>Tarik Data Log</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs min-w-[600px]">
-              <thead>
-                <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                  <th class="p-3 text-center w-12">No</th>
-                  <th class="p-3" id="th-col-1">Kolom 1</th>
-                  <th class="p-3" id="th-col-2">Kolom 2</th>
-                  <th class="p-3" id="th-col-3">Kolom 3</th>
-                  <th class="p-3" id="th-col-4">Kolom 4</th>
-                  <th class="p-3" id="th-col-5">Kolom 5</th>
-                </tr>
-              </thead>
-              <tbody id="container-log-rows" class="divide-y divide-slate-200">
-                <tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Klik tombol "Tarik Data Log" untuk memuat arsip server cloud...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+                <div style="font-size: 11px; color: #aaa; margin-top:6px;">STATUS SERVER: <span id="peer-status" style="color:#00ff66;">MENYIAPKAN...</span></div>
+                
+                <button class="btn-ff" style="width:100%; margin-top:8px;" onclick="createRoom()">👑 BUAT ROOM (HOST)</button>
+                
+                <div id="host-info" style="display:none;">
+                    <div class="room-code-display" id="room-code-tag">CODE: ----</div>
+                    <div style="font-size:11px; color:#00ff66; margin-bottom:5px;" id="connected-count">Pemain Terhubung: 1</div>
+                    <button class="btn-ff btn-start" style="width:100%;" onclick="startOnlineMatch()">🚀 MULAI GAME (START)</button>
+                </div>
 
-      <section id="panel-rekap-matrix" class="panel">
-        <div class="no-print bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-xs mb-5">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Format Cetak</label>
-              <select id="arsip-tipe" onchange="adjustMatrixFilterView()" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="KBM Harian">Matrix KBM Harian</option>
-                <option value="Pramuka">Matrix Pramuka Wajib</option>
-                <option value="Sholat">Matrix Sholat Berjamaah</option>
-                <option value="Daftar Nilai">Matrix Daftar Nilai</option>
-                <option value="Layanan BK">Daftar Kasus Layanan BK</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Kelas</label>
-              <select id="arsip-kelas" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-            </div>
-            <div id="wrapper-filter-mapel">
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
-              <select id="arsip-mapel" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="">-- Semua Mapel --</option>
-              </select>
-            </div>
-            <div id="wrapper-filter-guru">
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Guru / Pengampu</label>
-              <select id="arsip-guru" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="">-- Semua Guru --</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Bulan</label>
-              <select id="arsip-bulan" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option>
-                <option value="04">April</option><option value="05">Mei</option><option value="06" selected>Juni</option>
-                <option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option>
-                <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tahun</label>
-              <select id="arsip-tahun" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-                <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
-              </select>
-            </div>
-            <div class="flex gap-2 items-end">
-              <div class="grow">
-                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Filter Hari (Opsional)</label>
-                <input type="text" id="arsip-hari" placeholder="Contoh: 15" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-              </div>
-              <button onclick="fetchMonthlyHistoryMatrix()" class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs p-2.5 rounded-lg shadow-xs cursor-pointer h-9 shrink-0 flex items-center justify-center"><i class="fa-solid fa-sync mr-1"></i>Generate</button>
-            </div>
-          </div>
-        </div>
-        
-        <div id="matrix-preview-container" class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-          <p class="p-8 text-slate-400 italic text-center">Silakan sesuaikan konfigurasi filter di atas lalu klik "Generate Matrix" untuk membuat lembar cetak administrasi...</p>
-        </div>
-      </section>
-
-      <section id="panel-upload-massal" class="panel">
-        <div class="max-w-xl bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-xs">
-          <div class="mb-4">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Pilih Kelas Tujuan</label>
-            <select id="upl-kelas" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none"></select>
-          </div>
-          <div class="mb-5">
-            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Daftar Nama Siswa (Salin Tempel per Baris)</label>
-            <textarea id="upl-siswa-list" rows="10" placeholder="Contoh input:&#10;ANDI WIJAYA&#10;BUDI SANTOSO&#10;CITRA LESTARI&#10;DEDI KURNIAWAN" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-slate-50 font-mono focus:outline-none"></textarea>
-            <p class="text-[10px] text-slate-400 font-semibold mt-1">*Pastikan satu baris hanya diisi oleh satu nama lengkap siswa.</p>
-          </div>
-          <button onclick="submitUploadMassalSiswa()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs py-3 rounded-lg shadow-sm cursor-pointer"><i class="fa-solid fa-users-medical mr-2"></i>Kirim & Sinkronkan Database Siswa</button>
-        </div>
-      </section>
-
-      <section id="panel-master" class="panel">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <h6 class="text-xs font-bold text-slate-700 uppercase mb-3"><i class="fa-solid fa-door-closed mr-1.5 text-slate-400"></i>Tambah Ruang Kelas</h6>
-            <textarea id="mst-kelas-input" rows="4" placeholder="Contoh:&#10;X-TKRO-1&#10;X-TKRO-2" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold mb-3 focus:outline-none"></textarea>
-            <button onclick="saveMasterElement('tambahMasterKelas', 'mst-kelas-input')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 md:py-2 rounded-lg cursor-pointer">Simpan Kelas</button>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <h6 class="text-xs font-bold text-slate-700 uppercase mb-3"><i class="fa-solid fa-user-tie mr-1.5 text-slate-400"></i>Tambah Guru / Konselor</h6>
-            <textarea id="mst-guru-input" rows="4" placeholder="Contoh:&#10;Drs. Ahmad Yani&#10;Siti Aminah, S.Pd" class="w-full text-xs p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold mb-3 focus:outline-none"></textarea>
-            <button onclick="saveMasterElement('tambahMasterGuru', 'mst-guru-input')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 md:py-2 rounded-lg cursor-pointer">Simpan Guru</button>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <h6 class="text-xs font-bold text-slate-700 uppercase mb-3"><i class="fa-solid fa-book-bookmark mr-1.5 text-slate-400"></i>Tambah Mapel Pintar</h6>
-            <div class="flex flex-col gap-2 mb-3">
-              <input type="text" id="mst-mapel-nama" placeholder="Nama Mapel (Contoh: Matematika)" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-              <input type="text" id="mst-mapel-jurusan" placeholder="Jurusan (Opsional, Contoh: TKRO)" class="w-full text-xs p-2.5 md:p-2 rounded-lg border border-slate-300 bg-slate-50 font-semibold focus:outline-none">
-            </div>
-            <button onclick="saveMasterMapelPintar()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs py-2.5 md:py-2 rounded-lg cursor-pointer">Simpan Mapel Pintar</button>
-          </div>
-        </div>
-      </section>
-
-    </div>
-  </main>
-
-  <script>
-    let CACHE_MASTER = { kelas: [], mapel: [], guru: [], siswa: [] };
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const hariIni = new Date().toISOString().split('T')[0];
-      if(document.getElementById("abs-tanggal")) document.getElementById("abs-tanggal").value = hariIni;
-      if(document.getElementById("age-tanggal")) document.getElementById("age-tanggal").value = hariIni;
-      if(document.getElementById("bk-tanggal")) document.getElementById("bk-tanggal").value = hariIni;
-      
-      initMasterDatabase();
-    });
-
-    // Kontrol Navigasi Sidebar Khusus Mobile Layar HP
-    function toggleSidebar(open) {
-      const sidebar = document.getElementById("main-sidebar");
-      const overlay = document.getElementById("sidebar-overlay");
-      if (open) {
-        sidebar.classList.remove("-translate-x-full");
-        overlay.classList.remove("hidden");
-      } else {
-        sidebar.classList.add("-translate-x-full");
-        overlay.classList.add("hidden");
-      }
-    }
-
-    function showLoading(stat) {
-      document.getElementById("global-loader").style.display = stat ? "flex" : "none";
-    }
-
-    function switchPanel(panelId) {
-      // Otomatis tutup sidebar jika diakses di mobile saat pindah panel menu
-      toggleSidebar(false);
-
-      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("bg-slate-800", "text-white"));
-      
-      document.getElementById("panel-" + panelId).classList.add("active");
-      
-      const titles = {
-        'dashboard': 'Dashboard Utama', 'absensi': 'Input Presensi Cloud', 'nilai': 'Daftar Nilai Massal',
-        'agenda': 'Jurnal Agenda Mengajar', 'bk': 'Kasus Bimbingan Konseling', 'rekap-log': 'Log Histori Bulanan',
-        'rekap-matrix': 'Cetak Laporan Matrix', 'upload-massal': 'Upload Siswa Massal', 'master': 'Kelola Master Data'
-      };
-      document.getElementById("header-title").innerText = titles[panelId] || "SIMAK PANEL";
-      
-      const activeBtn = Array.from(document.querySelectorAll(".nav-btn")).find(btn => btn.getAttribute("onclick").includes(panelId));
-      if(activeBtn) activeBtn.classList.add("bg-slate-800", "text-white");
-    }
-
-    function initMasterDatabase() {
-      showLoading(true);
-      fetch(`${API_URL}?action=getMasterData`)
-      .then(r => r.json())
-      .then(res => {
-        showLoading(false);
-        if(!res.success) return alert("Koneksi gagal sinkronisasi: " + res.error);
-        
-        CACHE_MASTER = res.data;
-        
-        document.getElementById("dash-total-kelas").innerText = CACHE_MASTER.kelas.length;
-        document.getElementById("dash-total-guru").innerText = CACHE_MASTER.guru.length;
-        document.getElementById("dash-total-mapel").innerText = CACHE_MASTER.mapel.length;
-        document.getElementById("dash-total-siswa").innerText = CACHE_MASTER.siswa.length;
-        
-        populateSelectOptions("abs-kelas", CACHE_MASTER.kelas, true);
-        populateSelectOptions("abs-mapel", CACHE_MASTER.mapel);
-        populateSelectOptions("abs-guru", CACHE_MASTER.guru);
-        
-        populateSelectOptions("nil-kelas", CACHE_MASTER.kelas, true);
-        populateSelectOptions("nil-mapel", CACHE_MASTER.mapel); 
-        populateSelectOptions("nil-guru", CACHE_MASTER.guru);
-        
-        populateSelectOptions("age-kelas", CACHE_MASTER.kelas);
-        populateSelectOptions("age-guru", CACHE_MASTER.guru);
-        
-        populateSelectOptions("bk-kelas", CACHE_MASTER.kelas, true);
-        populateSelectOptions("bk-guru", CACHE_MASTER.guru);
-        
-        populateSelectOptions("log-kelas", CACHE_MASTER.kelas);
-        populateSelectOptions("upl-kelas", CACHE_MASTER.kelas);
-
-        populateSelectOptions("arsip-kelas", CACHE_MASTER.kelas);
-        populateSelectOptions("arsip-mapel", CACHE_MASTER.mapel, false, "-- Semua Mapel --");
-        populateSelectOptions("arsip-guru", CACHE_MASTER.guru, false, "-- Semua Guru --");
-      }).catch(err => {
-        showLoading(false);
-        alert("Server cloud offline: " + err);
-      });
-    }
-
-    function populateSelectOptions(elementId, arrayData, triggerPlaceholder = false, customText = "-- Pilih --") {
-      const select = document.getElementById(elementId);
-      if(!select) return;
-      let html = triggerPlaceholder ? `<option value="">${customText}</option>` : "";
-      if(elementId === "log-kelas") html = `<option value="">Semua Kelas</option>`;
-      if(elementId === "arsip-mapel") html = `<option value="">-- Semua Mapel --</option>`;
-      if(elementId === "arsip-guru") html = `<option value="">-- Semua Guru --</option>`;
-      
-      arrayData.forEach(item => {
-        html += `<option value="${item}">${item}</option>`;
-      });
-      select.innerHTML = html;
-    }
-
-    function adjustMatrixFilterView() {
-      const tipe = document.getElementById("arsip-tipe").value;
-      const wMapel = document.getElementById("wrapper-filter-mapel");
-      if(tipe === "Layanan BK" || tipe === "Pramuka" || tipe === "Sholat") {
-        wMapel.style.display = "none";
-      } else {
-        wMapel.style.display = "block";
-      }
-    }
-
-    function loadSiswaUntukAbsen() {
-      const targetKelas = document.getElementById("abs-kelas").value;
-      const tbody = document.getElementById("container-siswa-absen");
-      if(!targetKelas) { tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Pilih kelas dahulu...</td></tr>`; return; }
-      
-      const siswaTerfilter = CACHE_MASTER.siswa.filter(s => s.kelas === targetKelas);
-      if(siswaTerfilter.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-rose-500 italic">Database siswa kosong!</td></tr>`; return; }
-      
-      let html = "";
-      siswaTerfilter.forEach((siswa, index) => {
-        html += `
-          <tr class="siswa-row-absen hover:bg-slate-50" data-nama="${siswa.nama}">
-            <td class="p-3 text-center font-bold text-slate-400">${index+1}</td>
-            <td class="p-3 font-bold text-slate-800 uppercase break-words max-w-[150px]">${siswa.nama}</td>
-            <td class="p-3 text-center">
-              <div class="flex justify-center gap-1.5 font-bold text-[11px]">
-                <label class="cursor-pointer"><input type="radio" name="rad-abs-${index}" value="H" checked class="hidden peer"><span class="inline-block min-w-[28px] text-center px-2 py-1 rounded border border-slate-300 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600">H</span></label>
-                <label class="cursor-pointer"><input type="radio" name="rad-abs-${index}" value="S" class="hidden peer"><span class="inline-block min-w-[28px] text-center px-2 py-1 rounded border border-slate-300 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600">S</span></label>
-                <label class="cursor-pointer"><input type="radio" name="rad-abs-${index}" value="I" class="hidden peer"><span class="inline-block min-w-[28px] text-center px-2 py-1 rounded border border-slate-300 peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500">I</span></label>
-                <label class="cursor-pointer"><input type="radio" name="rad-abs-${index}" value="A" class="hidden peer"><span class="inline-block min-w-[28px] text-center px-2 py-1 rounded border border-slate-300 peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600">A</span></label>
-              </div>
-            </td>
-          </tr>`;
-      });
-      tbody.innerHTML = html;
-    }
-
-    function setGlobalStatus(statusChar) {
-      document.querySelectorAll('#container-siswa-absen input[type="radio"]').forEach(radio => {
-        if(radio.value === statusChar) radio.checked = true;
-      });
-    }
-
-    function submitAbsensiCloud() {
-      const tgl = document.getElementById("abs-tanggal").value;
-      const kls = document.getElementById("abs-kelas").value;
-      const mpl = document.getElementById("abs-mapel").value;
-      const gru = document.getElementById("abs-guru").value;
-      const act = document.getElementById("abs-kegiatan").value;
-
-      if(!kls || !gru) return alert("Variabel kelas atau guru tidak boleh kosong!");
-      
-      let dataSiswa = [];
-      document.querySelectorAll(".siswa-row-absen").forEach(row => {
-        const nama = row.getAttribute("data-nama");
-        const status = row.querySelector('input[type="radio"]:checked').value;
-        dataSiswa.push({ nama: nama, status: status });
-      });
-
-      if(dataSiswa.length === 0) return alert("Lembar absensi kosong.");
-
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: act, tanggal: tgl, kelas: kls, mapel: mpl, guru: gru, dataSiswa: dataSiswa })
-      })
-      .then(r => r.json())
-      .then(res => {
-        showLoading(false);
-        alert(res.message || "Presensi sukses dikunci!");
-        if(res.success) { document.getElementById("container-siswa-absen").innerHTML = `<tr><td colspan="3" class="p-4 text-center text-emerald-600 font-bold">Data aman terkunci di cloud.</td></tr>`; }
-      }).catch(() => { showLoading(false); alert("Error jaringan cloud."); });
-    }
-
-    function loadSiswaUntukNilai() {
-      const targetKelas = document.getElementById("nil-kelas").value;
-      const tbody = document.getElementById("container-siswa-nilai");
-      if(!targetKelas) { tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Pilih kelas dahulu...</td></tr>`; return; }
-      
-      const siswaTerfilter = CACHE_MASTER.siswa.filter(s => s.kelas === targetKelas);
-      if(siswaTerfilter.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-rose-500 italic">Database siswa kelas ini masih kosong!</td></tr>`; return; }
-      
-      let html = "";
-      siswaTerfilter.forEach((siswa, index) => {
-        html += `
-          <tr class="siswa-row-nilai hover:bg-slate-50" data-nama="${siswa.nama}">
-            <td class="p-3 text-center font-bold text-slate-400">${index+1}</td>
-            <td class="p-3 font-bold text-slate-800 uppercase break-words max-w-[150px]">${siswa.nama}</td>
-            <td class="p-3 text-center">
-              <input type="number" min="0" max="100" value="80" class="inp-skor-nilai w-24 p-1.5 rounded border border-slate-300 text-center font-bold bg-slate-50 text-blue-900 focus:outline-none">
-            </td>
-          </tr>`;
-      });
-      tbody.innerHTML = html;
-    }
-
-    function setGlobalNilai() {
-      document.querySelectorAll(".inp-skor-nilai").forEach(inp => inp.value = 80);
-    }
-
-    function submitNilaiCloud() {
-      const judul = document.getElementById("nil-tugas").value.trim();
-      const kls = document.getElementById("nil-kelas").value;
-      const mpl = document.getElementById("nil-mapel").value;
-      const gru = document.getElementById("nil-guru").value;
-
-      if(!judul || !kls || !mpl || !gru) return alert("Judul tugas, kelas, mapel, dan guru harus diisi lengkap!");
-
-      let dataNilai = [];
-      document.querySelectorAll(".siswa-row-nilai").forEach(row => {
-        const nama = row.getAttribute("data-nama");
-        const skor = row.querySelector(".inp-skor-nilai").value;
-        dataNilai.push({ nama: nama, nilai: skor });
-      });
-
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "submitNilai", judulTugas: judul, kelas: kls, mapel: mpl, guru: gru, dataNilai: dataNilai })
-      })
-      .then(r => r.json())
-      .then(res => {
-        showLoading(false);
-        alert(res.message);
-        if(res.success) loadSiswaUntukNilai();
-      }).catch(() => { showLoading(false); alert("Error transmisi data."); });
-    }
-
-    function submitAgendaCloud() {
-      const tgl = document.getElementById("age-tanggal").value;
-      const kls = document.getElementById("age-kelas").value;
-      const mat = document.getElementById("age-materi").value.trim();
-      const sts = document.getElementById("age-status").value;
-      const hdr = document.getElementById("age-hadir").value;
-      const abs = document.getElementById("age-absen").value;
-      const gru = document.getElementById("age-guru").value;
-
-      if(!mat) return alert("Deskripsi isi materi jurnal wajib ditulis!");
-
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "submitAgenda", tanggal: tgl, kelas: kls, materi: mat, statusKelas: sts, hadir: hdr, absen: abs, guru: gru })
-      })
-      .then(r => r.json())
-      .then(res => { showLoading(false); alert(res.message); if(res.success) document.getElementById("age-materi").value=""; })
-      .catch(() => { showLoading(false); alert("Error."); });
-    }
-
-    function loadSiswaUntukBK() {
-      const targetKelas = document.getElementById("bk-kelas").value;
-      const selectSiswa = document.getElementById("bk-siswa");
-      if(!targetKelas) { selectSiswa.innerHTML = `<option value="">-- Pilih --</option>`; return; }
-      
-      const filterSiswa = CACHE_MASTER.siswa.filter(s => s.kelas === targetKelas);
-      let html = "";
-      filterSiswa.forEach(s => { html += `<option value="${s.nama}">${s.nama}</option>`; });
-      selectSiswa.innerHTML = html || `<option value="">Siswa Kosong</option>`;
-    }
-
-    function submitBKCloud() {
-      const tgl = document.getElementById("bk-tanggal").value;
-      const kls = document.getElementById("bk-kelas").value;
-      const sis = document.getElementById("bk-siswa").value;
-      const kat = document.getElementById("bk-kategori").value;
-      const mas = document.getElementById("bk-masalah").value.trim();
-      const sol = document.getElementById("bk-solusi").value.trim();
-      const gru = document.getElementById("bk-guru").value;
-
-      if(!sis || !mas || !sol) return alert("Lengkapi data input pelanggaran kasus!");
-
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "submitBimbingan", tanggal: tgl, kelas: kls, namaSiswa: sis, kategori: kat, masalah: mas, solusi: sol, guru: gru })
-      })
-      .then(r => r.json())
-      .then(res => {
-        showLoading(false); alert(res.message);
-        if(res.success) { document.getElementById("bk-masalah").value = ""; document.getElementById("bk-solusi").value = ""; }
-      }).catch(() => { showLoading(false); alert("Gagal."); });
-    }
-
-    function fetchMonthlyLogDashboard() {
-      const menu = document.getElementById("log-menu").value;
-      const kelas = document.getElementById("log-kelas").value;
-      const bulan = document.getElementById("log-bulan").value;
-      const tahun = document.getElementById("log-tahun").value;
-      const tbody = document.getElementById("container-log-rows");
-
-      tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Membuka log arsip cloud...</td></tr>`;
-      
-      const labelTabel = {
-        "KBM Harian": ["Tanggal", "Kelas", "Mata Pelajaran", "Guru Pengajar", "Nama Siswa", "Status Absen"],
-        "Pramuka": ["Tanggal", "Kelas", "Kategori", "Instruktur", "Nama Siswa", "Status Absen"],
-        "Sholat": ["Tanggal", "Kelas", "Kegiatan", "Imam/Guru", "Nama Siswa", "Status Absen"],
-        "Daftar Nilai Tugas": ["Waktu Unggah", "Kelas", "Nama Tugas", "Guru Pengampu", "Nama Siswa", "Skor Nilai"],
-        "Agenda": ["Tanggal", "Kelas", "Status Kelas", "Guru Piket", "Bahasan Materi", "Keterangan Log"],
-        "BK": ["Tanggal", "Kelas", "Kategori Kasus", "Konselor", "Nama Siswa", "Uraian Pelanggaran"]
-      };
-
-      const headers = labelTabel[menu] || ["Col1", "Col2", "Col3", "Col4", "Col5", "Col6"];
-      for(let i=0; i<5; i++) { document.getElementById(`th-col-${i+1}`).innerText = headers[i+1]; }
-
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "getRekapBulanan", menu: menu, kelas: kelas, bulan: bulan, tahun: tahun })
-      })
-      .then(r => r.json())
-      .then(res => {
-        if(!res.success || !res.rows || res.rows.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Arsip data log nihil.</td></tr>`; return; }
-        let html = "";
-        res.rows.forEach((row, i) => {
-          html += `
-            <tr class="hover:bg-slate-50">
-              <td class="p-3 text-center font-bold text-slate-400">${i+1}</td>
-              <td class="p-3 font-semibold text-slate-800 whitespace-nowrap">${row[1]}</td>
-              <td class="p-3 text-slate-600">${row[2]}</td>
-              <td class="p-3 text-slate-600">${row[3]}</td>
-              <td class="p-3 font-bold text-slate-700 uppercase">${row[4]}</td>
-              <td class="p-3"><span class="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100">${row[5]}</span></td>
-            </tr>`;
-        });
-        tbody.innerHTML = html;
-      }).catch(() => tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-rose-500 text-center font-semibold">Gagal memuat log database server.</td></tr>`);
-    }
-
-    function fetchMonthlyHistoryMatrix() {
-      const tipe = document.getElementById("arsip-tipe").value;
-      const kelas = document.getElementById("arsip-kelas").value;
-      const mapel = document.getElementById("arsip-mapel").value;
-      const guru = document.getElementById("arsip-guru").value;
-      const bulan = document.getElementById("arsip-bulan").value;
-      const tahun = document.getElementById("arsip-tahun").value;
-      const hari = document.getElementById("arsip-hari").value;
-      const container = document.getElementById("matrix-preview-container");
-
-      if(!kelas) return alert("Pilih kelas terlebih dahulu!");
-      container.innerHTML = `<p class="p-8 text-slate-400 italic text-center"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Menyusun matrix data laporan...</p>`;
-
-      const tglCtxt = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "getHistoriBulanan", tipe: tipe, kelas: kelas, mapel: mapel, guru: guru, bulan: bulan, tahun: tahun, hari: hari })
-      })
-      .then(r => r.json())
-      .then(res => {
-        if(!res.success) return container.innerHTML = `<p class="p-4 text-rose-600">Gagal: ${res.error}</p>`;
-        
-        if (tipe === "Layanan BK") {
-          if(!res.listBK || res.listBK.length === 0) { container.innerHTML = `<p class="p-4 text-center text-slate-400 italic">Arsip BK Nihil untuk kriteria guru/kelas tersebut.</p>`; return; }
-          let html = `
-            <div class="text-center mb-5 border-b-2 border-slate-800 pb-3">
-              <h2 class="text-sm font-black uppercase tracking-wide">LAPORAN LAYANAN BIMBINGAN KONSELING (BK)</h2>
-              <p class="text-[11px] font-bold text-slate-600">SMK N 1 SINGKIL UTARA</p>
-              <div class="flex justify-between text-[10px] text-slate-500 font-semibold mt-2 px-1">
-                <span>Kelas: ${kelas} • Periode: ${bulan}/${tahun}</span>
-                <span>Tanggal Cetak: ${tglCtxt}</span>
-              </div>
-            </div>
-            <table class="w-full text-[10px] border-collapse border border-slate-400 text-left min-w-[550px]">
-              <thead>
-                <tr class="bg-slate-100 text-slate-700 font-bold">
-                  <th class="border border-slate-400 p-1 text-center">No</th><th class="border border-slate-400 p-1">Tanggal</th><th class="border border-slate-400 p-1">Konselor</th><th class="border border-slate-400 p-1">Kategori</th><th class="border border-slate-400 p-1">Nama Siswa</th><th class="border border-slate-400 p-1">Detail Pelanggaran/Kasus & Solusi</th>
-                </tr>
-              </thead><tbody>`;
-          res.listBK.forEach((row, i) => {
-            let d = new Date(row[0]).toLocaleDateString('id-ID');
-            html += `<tr><td class="border border-slate-400 p-1 text-center font-bold">${i+1}</td><td class="border border-slate-400 p-1 whitespace-nowrap">${d}</td><td class="border border-slate-400 p-1">${row[2]}</td><td class="border border-slate-400 p-1">${row[3]}</td><td class="border border-slate-400 p-1 font-bold">${row[4]}</td><td class="border border-slate-400 p-1"><strong>Masalah:</strong> ${row[5]}</td></tr>`;
-          });
-          html += `</tbody></table><button onclick="window.print()" class="no-print mt-4 bg-purple-600 text-white font-bold px-4 py-2 rounded text-xs cursor-pointer">Cetak Dokumen</button>`;
-          container.innerHTML = html;
-          return;
-        }
-
-        const headers = res.headers; const matrix = res.matrix;
-        const namaMapel = mapel || res.mapel || "Semua Mata Pelajaran";
-        const namaGuru = guru || res.guru || "Semua Guru Pengampu";
-        
-        if(!headers || headers.length === 0) { container.innerHTML = `<p class="p-4 text-center text-slate-400 italic">Tidak ada rekaman data aktivitas harian terkunci untuk Mapel/Guru ini.</p>`; return; }
-        
-        let html = `
-          <div class="mb-4 border-b-2 border-slate-800 pb-2">
-            <div class="flex justify-between items-center">
-              <div class="text-left">
-                <h2 class="text-xs font-black uppercase tracking-wide">REKAP MATRIX ADMINISTRASI CLOUD SPREAD</h2>
-                <p class="text-[11px] font-bold text-slate-700 uppercase">${tipe} - SMK N 1 SINGKIL UTARA</p>
-              </div>
-              <button onclick="window.print()" class="no-print bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 rounded text-[11px] shadow-xs cursor-pointer"><i class="fa-solid fa-print mr-1"></i>Print / Cetak</button>
+                <div style="margin: 8px 0 4px 0; font-weight: bold; font-size:11px;">--- MASUK ROOM TEMAN ---</div>
+                <input type="text" id="join-room-input" placeholder="KODE ROOM (4 DIGIT)" maxlength="4">
+                <button class="btn-ff btn-sub" style="width:100%; margin-top:6px;" onclick="joinRoom()">🎮 MASUK ROOM</button>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-bold text-slate-600 mt-2 bg-slate-50 p-2 rounded border border-slate-200">
-              <div>
-                <p><i class="fa-solid fa-door-open mr-1 text-slate-400"></i> Kelas: <span class="text-slate-900">${kelas}</span></p>
-                <p><i class="fa-solid fa-book mr-1 text-slate-400"></i> Mata Pelajaran: <span class="text-blue-800 font-extrabold">${namaMapel}</span></p>
-                <p><i class="fa-solid fa-user-tie mr-1 text-slate-400"></i> Guru Pengampu: <span class="text-slate-900">${namaGuru}</span></p>
-              </div>
-              <div class="sm:text-right">
-                <p><i class="fa-solid fa-calendar-days mr-1 text-slate-400"></i> Periode: <span class="text-slate-900">${bulan}/${tahun}</span></p>
-                <p><i class="fa-solid fa-print mr-1 text-slate-400"></i> Tanggal Cetak: <span class="text-emerald-700 font-extrabold">${tglCtxt}</span></p>
-              </div>
+            <button class="btn-ff btn-sub" onclick="toggleFullscreen()">📺 FULLSCREEN MODE</button>
+        </div>
+
+        <!-- POP-UP WINNER & LEADERBOARD -->
+        <div id="win-screen" class="modal-screen" style="display:none;">
+            <div id="win-title" class="menu-title" style="color:#00ff66;">VICTORY!</div>
+            <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL PERTANDINGAN</div>
+            
+            <div style="width: 90%; max-width: 400px; background: rgba(0,0,0,0.8); border: 1px solid #ffaa00; border-radius: 10px; padding: 10px; margin-bottom: 10px;">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr><th>Peringkat</th><th>Tank</th><th>Kills</th><th>Skor</th></tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                    </tbody>
+                </table>
             </div>
-          </div>
-          
-          <table class="w-full text-[9px] border-collapse border border-slate-400 min-w-[600px]">
-            <thead>
-              <tr class="bg-slate-100 text-slate-800 font-bold">
-                <th class="border border-slate-400 p-1 text-center w-6">No</th>
-                <th class="border border-slate-400 p-1 text-left">Nama Siswa</th>`;
-        headers.forEach(h => {
-          let lbl = h; if(tipe !== 'Daftar Nilai') { lbl = h.split('-')[2]; }
-          html += `<th class="border border-slate-400 p-0.5 text-center whitespace-nowrap">${lbl}</th>`;
-        });
-        if(tipe === 'Daftar Nilai') { html += `<th class="border border-slate-400 p-1 text-center w-12 bg-blue-50">Rata2</th>`; }
-        else { html += `<th class="border border-slate-400 p-0.5 text-center w-6 bg-emerald-50">H</th><th class="border border-slate-400 p-0.5 text-center w-6 bg-blue-50">S</th><th class="border border-slate-400 p-0.5 text-center w-6 bg-amber-50">I</th><th class="border border-slate-400 p-0.5 text-center w-6 bg-rose-50">A</th>`; }
-        html += `</tr></thead><tbody>`;
-        
-        let nom = 1;
-        Object.keys(matrix).sort().forEach(siswa => {
-          html += `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="border border-slate-400 p-1 text-center font-bold">${nom++}</td>
-              <td class="border border-slate-400 p-1 text-left font-bold text-slate-800 whitespace-nowrap">${siswa}</td>`;
-          let sumNilai = 0, countH=0, countS=0, countI=0, countA=0;
-          headers.forEach(h => {
-            let val = matrix[siswa][h] || "";
-            if(tipe === 'Daftar Nilai') { sumNilai += parseFloat(val) || 0; }
-            else {
-              if(val === 'H') countH++; if(val === 'S') countS++;
-              if(val === 'I') countI++; if(val === 'A') countA++;
+            
+            <button class="btn-ff btn-reset" onclick="resetOnlineRoom()">🔄 RESET ROOM ONLINE</button>
+            <button class="btn-ff btn-sub" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
+        </div>
+    </div>
+
+    <script>
+        const actx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (actx.state === 'suspended') actx.resume();
+            let osc = actx.createOscillator(), gain = actx.createGain();
+            osc.connect(gain); gain.connect(actx.destination);
+
+            if(type === 'shoot') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, actx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, actx.currentTime); gain.gain.linearRampToValueAtTime(0.01, actx.currentTime + 0.12);
+                osc.start(); osc.stop(actx.currentTime + 0.12);
+            } else if(type === 'super') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(600, actx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, actx.currentTime); gain.gain.linearRampToValueAtTime(0.01, actx.currentTime + 0.25);
+                osc.start(); osc.stop(actx.currentTime + 0.25);
+            } else if(type === 'boom') {
+                let bufSize = actx.sampleRate * 0.3, buffer = actx.createBuffer(1, bufSize, actx.sampleRate), data = buffer.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+                let noise = actx.createBufferSource(); noise.buffer = buffer;
+                let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 500;
+                let g = actx.createGain(); g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.3);
+                noise.connect(filter); filter.connect(g); g.connect(actx.destination); noise.start();
             }
-            let bg = ""; if(val==='A') bg="bg-rose-100 text-rose-800 font-black"; if(val==='H') bg="text-emerald-700";
-            html += `<td class="border border-slate-400 p-0.5 text-center font-semibold ${bg}">${val}</td>`;
-          });
-          if(tipe === 'Daftar Nilai') { html += `<td class="border border-slate-400 p-1 text-center font-black bg-blue-50 text-blue-900">${(sumNilai / headers.length).toFixed(1)}</td>`; }
-          else { html += `<td class="border border-slate-400 p-0.5 text-center w-6 bg-emerald-50">${countH}</td><td class="border border-slate-400 p-0.5 text-center w-6 bg-blue-50">${countS}</td><td class="border border-slate-400 p-0.5 text-center w-6 bg-amber-50">${countI}</td><td class="border border-slate-400 p-0.5 text-center w-6 bg-rose-50">${countA}</td>`; }
-          html += `</tr>`;
-        });
-        html += `</tbody></table>`; container.innerHTML = html;
-      }).catch(() => container.innerHTML = `<p class="p-4 text-rose-600">Gagal memuat rekap data cloud.</p>`);
-    }
+        }
 
-    function submitUploadMassalSiswa() {
-      const kls = document.getElementById("upl-kelas").value;
-      const rawText = document.getElementById("upl-siswa-list").value;
-      if(!kls || !rawText.trim()) return alert("Pilih kelas dan isi daftar nama siswa!");
+        function speakIndo(text) {
+            document.getElementById('commentator-box').innerText = "🎙️ KOMENTATOR: " + text;
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'id-ID'; msg.rate = 1.2;
+                window.speechSynthesis.speak(msg);
+            }
+        }
 
-      const arrSiswa = rawText.split('\n').map(s => s.trim()).filter(Boolean);
+        function toggleFullscreen() {
+            let elem = document.documentElement;
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) elem.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
 
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "uploadSiswaMassal", kelas: kls, siswa: arrSiswa })
-      })
-      .then(r => r.json())
-      .then(res => {
-        showLoading(false); alert(res.message);
-        if(res.success) { document.getElementById("upl-siswa-list").value = ""; initMasterDatabase(); }
-      }).catch(() => { showLoading(false); alert("Error upload."); });
-    }
+        let selectedRole = 'player';
+        let peer = null, mySlot = 0, isHost = false;
+        let connections = [];
+        let hostConn = null;
+        let isAutoFireActive = false;
+        const PREFIX = "TR8-";
 
-    // Perbaikan: el.value = "" dipindahkan ke luar jika berhasil agar input terhapus di HP
-    function saveMasterElement(act, id) {
-      const el = document.getElementById(id); const val = el.value.trim(); if(!val) return alert("Input data kosong.");
-      let param = val.split('\n').map(item => item.trim()).filter(Boolean);
-      if(param.length === 0) return alert("Format entri data tidak valid.");
-      
-      showLoading(true);
-      fetch(API_URL, { method: "POST", body: JSON.stringify({ action: act, nama: param }) })
-      .then(r => r.json()).then(res => { showLoading(false); alert(res.message); if(res.success) { el.value=""; initMasterDatabase(); } })
-      .catch(() => { showLoading(false); alert("Error master saving."); });
-    }
+        function toggleAutoFire() {
+            isAutoFireActive = !isAutoFireActive;
+            let btn = document.getElementById('btn-autofire-toggle');
+            if(isAutoFireActive) {
+                btn.classList.add('active');
+                btn.innerText = "🔥 AUTO FIRE: ON";
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = "🔥 AUTO FIRE: OFF";
+            }
+        }
 
-    function saveMasterMapelPintar() {
-      const nama = document.getElementById("mst-mapel-nama").value.trim();
-      const jur = document.getElementById("mst-mapel-jurusan").value.trim();
-      if(!nama) return alert("Nama mata pelajaran tidak boleh kosong!");
+        function selectRole(role) {
+            selectedRole = role;
+            document.getElementById('role-player-btn').classList.toggle('active', role === 'player');
+            document.getElementById('role-jury-btn').classList.toggle('active', role === 'jury');
+        }
 
-      showLoading(true);
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "tambahMasterMapelPintar", namaMapel: nama, jurusan: jur })
-      })
-      .then(r => r.json()).then(res => {
-        showLoading(false); alert(res.message);
-        if(res.success) { document.getElementById("mst-mapel-nama").value=""; document.getElementById("mst-mapel-jurusan").value=""; initMasterDatabase(); }
-      }).catch(() => { showLoading(false); alert("Gagal."); });
-    }
-  </script>
+        function initPeer() {
+            peer = new Peer();
+            peer.on('open', id => {
+                document.getElementById('peer-status').innerText = "SIAP MABAR!";
+            });
+            peer.on('error', err => {
+                document.getElementById('peer-status').innerText = "ERROR KONEKSI";
+            });
+        }
+        initPeer();
+
+        function createRoom() {
+            let roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+            let fullId = PREFIX + roomCode;
+            
+            if(peer) peer.destroy();
+            peer = new Peer(fullId);
+
+            peer.on('open', id => {
+                isHost = true;
+                mySlot = 0;
+                document.getElementById('host-info').style.display = 'block';
+                document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
+                speakIndo(`Room dibuat! Bagikan kode ${roomCode} ke teman.`);
+            });
+
+            peer.on('connection', conn => {
+                if(connections.length >= 7) return; 
+                connections.push(conn);
+                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${connections.length + 1}`;
+                let assignedSlot = connections.length;
+                conn.on('open', () => {
+                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, isJury: conn.metadata ? conn.metadata.isJury : false });
+                });
+                conn.on('data', data => handleData(data));
+            });
+        }
+
+        function joinRoom() {
+            let code = document.getElementById('join-room-input').value.trim().toUpperCase();
+            if(!code) return alert("Masukkan Kode Room 4-Digit!");
+            
+            let fullId = PREFIX + code;
+            isHost = false;
+            
+            if(!peer) peer = new Peer();
+            hostConn = peer.connect(fullId, { metadata: { isJury: (selectedRole === 'jury') } });
+            
+            hostConn.on('open', () => {
+                speakIndo("Berhasil masuk Room! Menunggu Host...");
+            });
+            hostConn.on('data', data => handleData(data));
+        }
+
+        function startOnlineMatch() {
+            if(!isHost) return;
+            let chosenMap = document.getElementById('map-select').value;
+            broadcast({ type: 'START_MATCH', mapIndex: chosenMap });
+            startGame(chosenMap);
+        }
+
+        function broadcast(data) {
+            if(isHost) connections.forEach(c => c.send(data));
+            else if(hostConn) hostConn.send(data);
+        }
+
+        function triggerJuryVoice(text) {
+            broadcast({ type: 'JURY_VOICE', text: text });
+            speakIndo(text);
+        }
+
+        function triggerShakeArena() {
+            broadcast({ type: 'SHAKE' });
+            shakeScreen();
+        }
+
+        let shakeTime = 0;
+        function shakeScreen() { shakeTime = 15; }
+
+        function handleData(data) {
+            if(data.type === 'INIT_SLOT') {
+                mySlot = data.slot;
+                if(selectedRole === 'player') {
+                    document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
+                }
+            } else if(data.type === 'START_MATCH') {
+                startGame(data.mapIndex);
+            } else if(data.type === 'SYNC_POS') {
+                if(tanks[data.slot]) {
+                    tanks[data.slot].x = data.x;
+                    tanks[data.slot].y = data.y;
+                    tanks[data.slot].dir = data.dir;
+                    tanks[data.slot].weapon = data.weapon || tanks[data.slot].weapon;
+                }
+            } else if(data.type === 'FIRE') {
+                if(tanks[data.slot]) fire(tanks[data.slot], false);
+            } else if(data.type === 'JURY_VOICE') {
+                speakIndo(data.text);
+            } else if(data.type === 'SHAKE') {
+                shakeScreen();
+            } else if(data.type === 'RESET_ROOM') {
+                resetData(currentMapType);
+                document.getElementById('win-screen').style.display = 'none';
+                speakIndo("Room di-reset! Pertandingan diulang!");
+            }
+        }
+
+        const cvs = document.getElementById('gameCanvas');
+        const ctx = cvs.getContext('2d');
+        const S = 75, G = 16;
+
+        let map = [];
+        let currentMapType = 0;
+
+        function generateMap(type) {
+            currentMapType = type;
+            map = Array(G).fill(0).map(() => Array(G).fill(0));
+            
+            for(let r=0; r<G; r++) {
+                for(let c=0; c<G; c++) {
+                    if(r===0 || c===0 || r===G-1 || c===G-1) map[r][c] = 2;
+                }
+            }
+
+            if(type == 0) {
+                for(let r=2; r<G-2; r+=3) {
+                    for(let c=2; c<G-2; c+=3) map[r][c] = 1;
+                }
+            } else if(type == 1) { 
+                for(let r=2; r<G-2; r+=2) {
+                    for(let c=2; c<G-2; c++) {
+                        if((r+c)%3 === 0) map[r][c] = 1;
+                        else if((r+c)%5 === 0) map[r][c] = 3;
+                    }
+                }
+            } else if(type == 2) { 
+                for(let i=3; i<13; i++) {
+                    if(i!==7 && i!==8) {
+                        map[i][7] = 1; map[i][8] = 1;
+                        map[7][i] = 1; map[8][i] = 1;
+                    }
+                }
+                map[3][3] = map[3][4] = map[4][3] = map[4][4] = 4;
+                map[11][11] = map[11][12] = map[12][11] = map[12][12] = 4;
+            }
+        }
+
+        let tanks = [], bullets = [], particles = [], powerups = [];
+        let isGameOver = false;
+        let powerupInterval = null;
+
+        const defaultColors = ['#00ffff', '#ff0055', '#aa00ff', '#00ff66', '#ffaa00', '#ff00ff', '#ffff00', '#0099ff'];
+
+        function getClassStats(cType) {
+            if(cType === 'LIGHT') return { hp: 130, speed: 5.2 };
+            if(cType === 'HEAVY') return { hp: 320, speed: 2.5 };
+            return { hp: 200, speed: 3.8 };
+        }
+
+        // FUNGSI UNTUK MENDAPATKAN WARNA DARI SENJATA TANK
+        function getWeaponColor(weapon, baseColor) {
+            if(weapon === 'LASER') return '#00ffff';    // CYAN GLOWING
+            if(weapon === 'TRIPLE') return '#ff00ff';   // PINK NEON
+            if(weapon === 'MISSILE') return '#ff6600';  // ORANYE DANGER
+            return baseColor;                            // WARNA ASLI
+        }
+
+        function resetData(mapType = 0) {
+            generateMap(mapType);
+            tanks = [];
+            let spawnCoords = [
+                {x:1,y:1}, {x:14,y:14}, {x:14,y:1}, {x:1,y:14},
+                {x:7,y:1}, {x:7,y:14}, {x:1,y:7}, {x:14,y:7}
+            ];
+
+            let activeHumanCount = isHost ? (connections.length + 1) : 1;
+            let chosenClass = document.getElementById('class-select').value;
+
+            for(let i=0; i<8; i++) {
+                let isBot = (i >= activeHumanCount);
+                let cStats = getClassStats(isBot ? 'MEDIUM' : chosenClass);
+
+                tanks.push({
+                    id: i+1,
+                    x: spawnCoords[i].x * S, y: spawnCoords[i].y * S,
+                    vx: 0, vy: 0,
+                    dir: 1, 
+                    baseColor: defaultColors[i],
+                    color: defaultColors[i],
+                    hp: cStats.hp, maxHp: cStats.hp, speed: cStats.speed,
+                    kills: 0, score: 0, alive: true,
+                    weapon: 'NORMAL', weaponTimer: 0,
+                    shieldTimer: 0, speedTimer: 0,
+                    streak: 0, inBush: false,
+                    isBot: isBot,
+                    lastBotMove: 0, lastBotFire: 0
+                });
+            }
+
+            bullets = []; particles = []; powerups = [];
+            isGameOver = false;
+        }
+
+        let keys = {};
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function bindTouch(id, keyName) {
+            let el = document.getElementById(id);
+            const press = (e) => { e.preventDefault(); keys[keyName] = true; };
+            const release = (e) => { e.preventDefault(); keys[keyName] = false; };
+            el.addEventListener('touchstart', press, {passive: false});
+            el.addEventListener('touchend', release, {passive: false});
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
+        }
+
+        bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
+        bindTouch('btn-l', 'ArrowLeft'); bindTouch('btn-r', 'ArrowRight');
+        bindTouch('btn-f', ' ');
+
+        function spawnPowerup() {
+            if(powerups.length >= 4) return;
+            let rx = Math.floor(Math.random() * 12) + 2;
+            let ry = Math.floor(Math.random() * 12) + 2;
+            if(map[ry][rx] === 0) {
+                let types = ['TRIPLE', 'MISSILE', 'LASER', 'SHIELD', 'MEDKIT', 'SPEED'];
+                powerups.push({
+                    x: rx * S + S/2, y: ry * S + S/2,
+                    type: types[Math.floor(Math.random()*types.length)]
+                });
+                speakIndo("SUPLAI POWERUP BARU DITURUNKAN DI ARENA!");
+            }
+        }
+
+        function startGame(mapType = 0) {
+            if (actx.state === 'suspended') actx.resume();
+            resetData(mapType);
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('win-screen').style.display = 'none';
+
+            if(selectedRole === 'jury') {
+                document.getElementById('my-player-hud').style.display = 'none';
+                document.getElementById('player-controls').style.display = 'none';
+                document.getElementById('jury-panel').style.display = 'block';
+                speakIndo("Mode Juri aktif! Selamat bertugas.");
+            } else {
+                document.getElementById('my-player-hud').style.display = 'block';
+                document.getElementById('player-controls').style.display = 'flex';
+                document.getElementById('jury-panel').style.display = 'none';
+                document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
+                speakIndo("Game dimulai! Raih kemenangan!");
+            }
+
+            if(powerupInterval) clearInterval(powerupInterval);
+            powerupInterval = setInterval(() => {
+                if(!isGameOver) spawnPowerup();
+            }, 7000);
+
+            requestAnimationFrame(loop);
+        }
+
+        function exitGame() {
+            isGameOver = true;
+            if(powerupInterval) clearInterval(powerupInterval);
+            document.getElementById('win-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'flex';
+            speakIndo("Kembali ke Lobby Utama.");
+        }
+
+        function resetOnlineRoom() {
+            resetData(currentMapType);
+            broadcast({ type: 'RESET_ROOM' });
+            document.getElementById('win-screen').style.display = 'none';
+            speakIndo("Room di-reset! Pertandingan dimulai ulang!");
+        }
+
+        function fire(t, isLocal = true) {
+            if(!t.alive || isGameOver) return;
+            let now = Date.now();
+            let cooldown = t.weapon === 'LASER' ? 200 : (t.weapon === 'MISSILE' ? 500 : 350);
+            if(t.lastF && now - t.lastF < cooldown) return;
+            t.lastF = now;
+
+            let wColor = getWeaponColor(t.weapon, t.baseColor);
+
+            if(t.weapon === 'TRIPLE') {
+                playSound('super');
+                let dirs = [t.dir, (t.dir+1)%4, (t.dir+3)%4];
+                dirs.forEach(d => {
+                    bullets.push({ x: t.x + S/2, y: t.y + S/2, dir: d, id: t.id, c: wColor, dmg: 40, speed: 15 });
+                });
+            } else if(t.weapon === 'LASER') {
+                playSound('super');
+                bullets.push({ x: t.x + S/2, y: t.y + S/2, dir: t.dir, id: t.id, c: wColor, dmg: 60, speed: 22, isLaser: true });
+            } else if(t.weapon === 'MISSILE') {
+                playSound('super');
+                bullets.push({ x: t.x + S/2, y: t.y + S/2, dir: t.dir, id: t.id, c: wColor, dmg: 90, speed: 12, isMissile: true });
+            } else {
+                playSound('shoot');
+                bullets.push({ x: t.x + S/2, y: t.y + S/2, dir: t.dir, id: t.id, c: wColor, dmg: 35, speed: 14 });
+            }
+
+            if(isLocal && selectedRole === 'player' && !t.isBot) broadcast({ type: 'FIRE', slot: mySlot });
+        }
+
+        function addBoom(x, y, color, sizeMultiplier = 1) {
+            playSound('boom');
+            let pCount = Math.floor(15 * sizeMultiplier);
+            for(let i=0; i<pCount; i++) {
+                particles.push({
+                    x: x, y: y, vx: (Math.random()-0.5)*(12*sizeMultiplier), vy: (Math.random()-0.5)*(12*sizeMultiplier),
+                    size: Math.random()*7+3, c: color, life: 1
+                });
+            }
+        }
+
+        function updateAI(bot) {
+            if(!bot.alive || !isHost) return;
+            let now = Date.now();
+
+            let targets = tanks.filter(t => t.alive && t.id !== bot.id);
+            if(targets.length === 0) return;
+
+            if(now - bot.lastBotMove > 800) {
+                bot.lastBotMove = now;
+                let closest = targets[0];
+                let minDist = Math.hypot(closest.x - bot.x, closest.y - bot.y);
+                targets.forEach(t => {
+                    let d = Math.hypot(t.x - bot.x, t.y - bot.y);
+                    if(d < minDist) { minDist = d; closest = t; }
+                });
+
+                let dx = closest.x - bot.x;
+                let dy = closest.y - bot.y;
+
+                if(Math.abs(dx) > Math.abs(dy)) {
+                    bot.dir = dx > 0 ? 1 : 3;
+                } else {
+                    bot.dir = dy > 0 ? 2 : 0;
+                }
+            }
+
+            let moveSpd = bot.speedTimer > 0 ? bot.speed * 1.4 : bot.speed;
+            let oldX = bot.x, oldY = bot.y;
+
+            if(bot.dir === 0) bot.y -= moveSpd;
+            else if(bot.dir === 1) bot.x += moveSpd;
+            else if(bot.dir === 2) bot.y += moveSpd;
+            else if(bot.dir === 3) bot.x -= moveSpd;
+
+            bot.x = Math.max(S, Math.min((G-2)*S, bot.x));
+            bot.y = Math.max(S, Math.min((G-2)*S, bot.y));
+
+            let tx1 = Math.floor((bot.x+8)/S), ty1 = Math.floor((bot.y+8)/S);
+            let tx2 = Math.floor((bot.x+S-8)/S), ty2 = Math.floor((bot.y+S-8)/S);
+            if(map[ty1][tx1] === 1 || map[ty1][tx1] === 2 || map[ty2][tx1] === 1 || map[ty2][tx1] === 2) {
+                bot.x = oldX; bot.y = oldY;
+                bot.dir = (bot.dir + 1) % 4;
+            }
+
+            if(now - bot.lastBotFire > 1200) {
+                bot.lastBotFire = now;
+                fire(bot, false);
+            }
+        }
+
+        function triggerKillstreakVoice(streak, tankId) {
+            if(streak === 2) speakIndo(`Tank ${tankId} meraih DOUBLE KILL!`);
+            else if(streak === 3) speakIndo(`Tank ${tankId} meraih TRIPLE KILL!`);
+            else if(streak >= 4) speakIndo(`Tank ${tankId} UNSTOPPABLE! MERATAKAN ARENA!`);
+        }
+
+        function update() {
+            if(isGameOver) return;
+
+            if(selectedRole === 'player') {
+                let p = tanks[mySlot];
+                if(p && p.alive && !p.isBot) {
+                    let moveSpd = p.speedTimer > 0 ? p.speed * 1.4 : p.speed;
+                    let targetVx = 0, targetVy = 0;
+
+                    if(keys['ArrowUp'] || keys['w']) { p.dir=0; targetVy = -moveSpd; }
+                    else if(keys['ArrowRight'] || keys['d']) { p.dir=1; targetVx = moveSpd; }
+                    else if(keys['ArrowDown'] || keys['s']) { p.dir=2; targetVy = moveSpd; }
+                    else if(keys['ArrowLeft'] || keys['a']) { p.dir=3; targetVx = -moveSpd; }
+                    
+                    if(keys[' '] || isAutoFireActive) {
+                        fire(p, true);
+                    }
+
+                    let cx = Math.floor((p.x + S/2)/S), cy = Math.floor((p.y + S/2)/S);
+                    let isOnIce = (map[cy] && map[cy][cx] === 4);
+
+                    if(isOnIce) { 
+                        p.vx = p.vx * 0.92 + targetVx * 0.08;
+                        p.vy = p.vy * 0.92 + targetVy * 0.08;
+                    } else {
+                        p.vx = targetVx; p.vy = targetVy;
+                    }
+
+                    p.x += p.vx; p.y += p.vy;
+
+                    p.x = Math.max(S, Math.min((G-2)*S, p.x));
+                    p.y = Math.max(S, Math.min((G-2)*S, p.y));
+
+                    if(targetVx !== 0 || targetVy !== 0 || isOnIce) {
+                        broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, dir: p.dir, weapon: p.weapon });
+                    }
+                }
+            }
+
+            tanks.forEach(t => {
+                if(t.isBot) updateAI(t);
+
+                if(t.weaponTimer > 0) { 
+                    t.weaponTimer--; 
+                    if(t.weaponTimer <= 0) t.weapon = 'NORMAL'; 
+                }
+
+                // DYNAMIC WARNA TANK SESUAI SENJATA
+                t.color = getWeaponColor(t.weapon, t.baseColor);
+
+                if(t.shieldTimer > 0) t.shieldTimer--;
+                if(t.speedTimer > 0) t.speedTimer--;
+
+                if(t.alive) {
+                    let cx = Math.floor((t.x + S/2)/S), cy = Math.floor((t.y + S/2)/S);
+                    t.inBush = (map[cy] && map[cy][cx] === 3);
+
+                    let tx1 = Math.floor((t.x+8)/S), ty1 = Math.floor((t.y+8)/S);
+                    let tx2 = Math.floor((t.x+S-8)/S), ty2 = Math.floor((t.y+S-8)/S);
+                    if(map[ty1][tx1] === 1 || map[ty1][tx1] === 2 || map[ty2][tx1] === 1 || map[ty2][tx1] === 2 ||
+                       map[ty1][tx2] === 1 || map[ty1][tx2] === 2 || map[ty2][tx2] === 1 || map[ty2][tx2] === 2) {
+                        if(t.dir===0) t.y+=t.speed; if(t.dir===1) t.x-=t.speed; if(t.dir===2) t.y-=t.speed; if(t.dir===3) t.x+=t.speed;
+                    }
+
+                    for(let i=powerups.length-1; i>=0; i--) {
+                        let pw = powerups[i];
+                        if(Math.hypot((t.x+S/2)-pw.x, (t.y+S/2)-pw.y) < S/2) {
+                            if(pw.type === 'SHIELD') {
+                                t.shieldTimer = 350;
+                                speakIndo(`Tank ${t.id} mengaktifkan SHIELD PERLINDUNGAN!`);
+                            } else if(pw.type === 'MEDKIT') {
+                                t.hp = Math.min(t.maxHp, t.hp + 100);
+                                speakIndo(`Tank ${t.id} memulihkan HP dengan MEDKIT!`);
+                            } else if(pw.type === 'SPEED') {
+                                t.speedTimer = 350;
+                                speakIndo(`Tank ${t.id} mendapatkan SPEED BOOST!`);
+                            } else {
+                                t.weapon = pw.type; t.weaponTimer = 400;
+                                speakIndo(`Tank ${t.id} mengambil SENJATA BARU ${pw.type}! WARNA TANK BERUBAH!`);
+                            }
+                            powerups.splice(i,1);
+                        }
+                    }
+                }
+            });
+
+            for(let i=bullets.length-1; i>=0; i--) {
+                let b = bullets[i];
+                if(b.dir===0) b.y-=b.speed; if(b.dir===1) b.x+=b.speed;
+                if(b.dir===2) b.y+=b.speed; if(b.dir===3) b.x-=b.speed;
+
+                let gx = Math.floor(b.x/S), gy = Math.floor(b.y/S);
+                if(gy>=0 && gy<G && gx>=0 && gx<G) {
+                    if(map[gy][gx] === 1) { 
+                        addBoom(b.x, b.y, '#ffaa00', b.isMissile ? 2.5 : 1); 
+                        map[gy][gx]=0; 
+                        bullets.splice(i,1); 
+                        continue; 
+                    }
+                    if(map[gy][gx] === 2) { 
+                        addBoom(b.x, b.y, '#444', b.isMissile ? 2 : 1); 
+                        bullets.splice(i,1); 
+                        continue; 
+                    }
+                }
+
+                tanks.forEach(t => {
+                    if(t.alive && t.id !== b.id) {
+                        if(Math.abs(b.x - (t.x+S/2)) < S/2 && Math.abs(b.y - (t.y+S/2)) < S/2) {
+                            if(t.shieldTimer > 0) {
+                                addBoom(t.x+S/2, t.y+S/2, '#00ffff');
+                            } else {
+                                t.hp -= b.dmg;
+                                addBoom(t.x+S/2, t.y+S/2, t.color, b.isMissile ? 2.5 : 1);
+                            }
+                            bullets.splice(i,1);
+
+                            if(t.hp <= 0 && t.alive) {
+                                t.alive = false;
+                                addBoom(t.x+S/2, t.y+S/2, '#ff0000', 3);
+                                let killer = tanks.find(k => k.id === b.id);
+                                if(killer) {
+                                    killer.kills++;
+                                    killer.score += 100;
+                                    killer.streak++;
+                                    triggerKillstreakVoice(killer.streak, killer.id);
+                                }
+
+                                speakIndo(`Tank ${t.id} hancur oleh Tank ${killer ? killer.id : ''}!`);
+
+                                let aliveTanks = tanks.filter(x => x.alive);
+                                if(aliveTanks.length <= 1) {
+                                    isGameOver = true;
+                                    let winner = aliveTanks[0];
+                                    if(winner) winner.score += 200;
+
+                                    setTimeout(() => {
+                                        showLeaderboard(winner);
+                                    }, 600);
+                                }
+                            }
+                        }
+                    }
+                });
+                if(b.x<0 || b.y<0 || b.x>1200 || b.y>1200) bullets.splice(i,1);
+            }
+
+            if(selectedRole === 'player' && tanks[mySlot]) {
+                let myT = tanks[mySlot];
+                document.getElementById('p1-kills').innerText = myT.kills;
+                
+                let wTag = document.getElementById('p1-weapon');
+                wTag.innerText = myT.weapon;
+                wTag.style.color = myT.color;
+
+                let activeBuffs = [];
+                if(myT.shieldTimer > 0) activeBuffs.push("SHIELD 🛡️");
+                if(myT.speedTimer > 0) activeBuffs.push("SPEED ⚡");
+                document.getElementById('p1-buffs').innerText = "BUFF: " + (activeBuffs.join(" | ") || "NONE");
+
+                document.getElementById('hp-bar').style.width = Math.max(0, (myT.hp / myT.maxHp) * 100) + '%';
+            }
+            document.getElementById('alive-count').innerText = tanks.filter(x => x.alive).length;
+        }
+
+        function showLeaderboard(winner) {
+            document.getElementById('win-screen').style.display = 'flex';
+            document.getElementById('win-title').innerText = winner ? "VICTORY!" : "GAME OVER";
+            speakIndo(winner ? `PEMENANG TERAKHIR ADALAH Tank ${winner.id}!` : "Pertandingan Selesai!");
+
+            let sortedTanks = [...tanks].sort((a,b) => b.score - a.score);
+            let tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+
+            sortedTanks.forEach((t, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${index+1}</td>
+                    <td style="color:${t.color}; font-weight:bold;">Tank ${t.id} ${t.isBot ? '(BOT)' : ''}</td>
+                    <td>${t.kills}</td>
+                    <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function drawTank(t) {
+            if(!t.alive) return;
+            
+            if(t.inBush) {
+                let isMe = (selectedRole === 'player' && t.id === mySlot + 1);
+                if(!isMe && selectedRole !== 'jury') return;
+                ctx.globalAlpha = 0.4;
+            } else {
+                ctx.globalAlpha = 1.0;
+            }
+
+            ctx.save();
+            ctx.translate(t.x+S/2, t.y+S/2);
+
+            // GLOWING AURA TANK JIKA MEMAKAI SENJATA SPESIAL
+            if(t.weapon !== 'NORMAL') {
+                ctx.shadowColor = t.color;
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = t.color;
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(0, 0, S/2 + 2, 0, Math.PI*2); ctx.stroke();
+            }
+
+            ctx.rotate(t.dir * 90 * Math.PI/180);
+
+            if(t.shieldTimer > 0) {
+                ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.arc(0, 0, S/2 + 8, 0, Math.PI*2); ctx.stroke();
+            }
+
+            ctx.shadowColor = t.color;
+            ctx.shadowBlur = 15;
+            
+            // Roda Tank
+            ctx.fillStyle = '#111';
+            ctx.fillRect(-S/2+2, -S/2+2, 14, S-4); ctx.fillRect(S/2-16, -S/2+2, 14, S-4);
+
+            // Bodi Tank (Warna mengikuti Senjata)
+            ctx.fillStyle = t.color;
+            ctx.beginPath(); ctx.roundRect(-S/2+16, -S/2+10, S-32, S-20, 6); ctx.fill();
+
+            // Kubah Tengah
+            ctx.fillStyle = '#050508'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
+            
+            // Meriam Tank (Warna mengikuti Senjata)
+            ctx.fillStyle = t.color;
+            ctx.fillRect(-5, -S/2-8, 10, S/2+2);
+
+            ctx.restore();
+
+            // Bar HP
+            ctx.fillStyle = '#000'; ctx.fillRect(t.x+5, t.y-14, S-10, 6);
+            ctx.fillStyle = t.color; ctx.fillRect(t.x+5, t.y-14, ((S-10) * Math.max(0, t.hp)) / t.maxHp, 6);
+            
+            // Tag ID Pemain
+            ctx.fillStyle = t.color; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(`P${t.id}${t.isBot ? ' (BOT)' : ''}`, t.x+S/2, t.y-18);
+
+            ctx.globalAlpha = 1.0;
+        }
+
+        function draw() {
+            ctx.save();
+            if(shakeTime > 0) {
+                shakeTime--;
+                ctx.translate((Math.random()-0.5)*12, (Math.random()-0.5)*12);
+            }
+
+            ctx.clearRect(0,0,1200,1200);
+
+            for(let r=0; r<G; r++) {
+                for(let c=0; c<G; c++) {
+                    let x = c*S, y = r*S;
+                    if(map[r][c] === 1) { 
+                        ctx.fillStyle = '#7c2d12'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#451a03'; ctx.strokeRect(x,y,S,S);
+                    } else if(map[r][c] === 2) { 
+                        ctx.fillStyle = '#1e293b'; ctx.fillRect(x,y,S,S);
+                    } else if(map[r][c] === 4) { 
+                        ctx.fillStyle = 'rgba(0, 225, 255, 0.25)'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#00ffff'; ctx.strokeRect(x,y,S,S);
+                    }
+                }
+            }
+
+            powerups.forEach(pw => {
+                ctx.fillStyle = pw.type === 'LASER' ? '#00ffff' : (pw.type === 'TRIPLE' ? '#ff00ff' : (pw.type === 'MISSILE' ? '#ffaa00' : (pw.type === 'SHIELD' ? '#3399ff' : (pw.type === 'MEDKIT' ? '#00ff66' : '#ffea00'))));
+                ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 15;
+                ctx.beginPath(); ctx.arc(pw.x, pw.y, 16, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#000'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+                let icon = pw.type === 'SHIELD' ? '🛡️' : (pw.type === 'MEDKIT' ? '🧰' : (pw.type === 'SPEED' ? '⚡' : (pw.type === 'MISSILE' ? '🚀' : '★')));
+                ctx.fillText(icon, pw.x, pw.y+4);
+            });
+
+            tanks.forEach(drawTank);
+
+            for(let r=0; r<G; r++) {
+                for(let c=0; c<G; c++) {
+                    if(map[r][c] === 3) {
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.85)';
+                        ctx.beginPath(); ctx.roundRect(c*S, r*S, S, S, 12); ctx.fill();
+                    }
+                }
+            }
+
+            bullets.forEach(b => {
+                ctx.fillStyle = b.c;
+                ctx.shadowColor = b.c; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.isLaser ? 8 : (b.isMissile ? 10 : 6), 0, Math.PI*2); ctx.fill();
+            });
+
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x+=p.vx; p.y+=p.vy; p.life-=0.04;
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.c;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                if(p.life<=0) particles.splice(i,1);
+            }
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+    </script>
 </body>
 </html>
