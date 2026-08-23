@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE ULTRA HD: FIREBASE EDITION</title>
+    <title>TANK RUMBLE ULTRA HD: MABAR & BOT EDITION</title>
     
     <!-- FIREBASE SDK (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -49,12 +49,18 @@
         .menu-title { font-size: calc(2.5vw + 24px); font-weight: 900; color: #00ffcc; text-shadow: 0 0 35px #00ffcc; font-style: italic; margin-bottom: 4px; text-align: center; }
         .menu-sub { font-size: 12px; color: #ffaa00; letter-spacing: 3px; font-weight: bold; margin-bottom: 18px; text-align: center; }
         
-        .room-box { background: rgba(12, 14, 25, 0.9); border: 2px solid #00ffcc; padding: 18px; border-radius: 14px; margin-bottom: 12px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 10px 40px rgba(0,255,204,0.2); }
+        .room-box { background: rgba(12, 14, 25, 0.9); border: 2px solid #00ffcc; padding: 18px; border-radius: 14px; margin-bottom: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 40px rgba(0,255,204,0.2); }
         .room-box input, .room-box select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #00ffcc; background: #05060c; color: #00ffcc; font-size: 13px; text-align: center; font-weight: bold; margin-top: 6px; text-transform: uppercase; }
 
         .role-selector { display: flex; justify-content: space-between; margin-top: 6px; gap: 8px; }
         .role-btn { flex: 1; padding: 8px; background: #10121d; border: 2px solid #444; color: #aaa; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; }
         .role-btn.active { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.15); }
+
+        /* LIST PEMAIN LOBBY MABAR */
+        .player-list-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
+        .player-slot { background: #080a12; border: 1px solid #333; padding: 6px; border-radius: 6px; font-size: 10px; text-align: center; font-weight: bold; color: #666; }
+        .player-slot.occupied { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.1); }
+        .player-slot.bot { border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.1); }
 
         .btn-ff { width: 80%; max-width: 340px; padding: 12px; margin: 6px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 6px 25px rgba(0, 255, 204, 0.4); text-transform: uppercase; }
         .btn-sub { background: #161824; border: 2px solid #ffaa00; color: #ffaa00; }
@@ -125,35 +131,46 @@
         <!-- MENU LOBBY UTAMA -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE HD</div>
-            <div class="menu-sub">FIREBASE MULTIPLAYER EDITION</div>
+            <div class="menu-sub">FIREBASE MULTIPLAYER & BOT EDITION</div>
 
             <div class="room-box">
-                <div style="font-size: 11px; color: #aaa;">PILIH PERAN KAMU:</div>
+                <div style="font-size: 11px; color: #aaa;">PERAN ANDA:</div>
                 <div class="role-selector">
                     <button class="role-btn active" id="role-player-btn" onclick="selectRole('player')">🎮 PEMAIN</button>
-                    <button class="role-btn" id="role-jury-btn" onclick="selectRole('jury')">⚖️ JURI / WASIT</button>
+                    <button class="role-btn" id="role-jury-btn" onclick="selectRole('jury')">⚖️ WASIT/JURI</button>
                 </div>
 
-                <div style="font-size: 11px; color: #aaa; margin-top:8px;">PILIH CLASS TANK:</div>
+                <div style="font-size: 11px; color: #aaa; margin-top:8px;">CLASS TANK:</div>
                 <select id="class-select">
-                    <option value="MEDIUM">MEDIUM (SMOOTH & BALANCED)</option>
+                    <option value="MEDIUM">MEDIUM (BALANCED)</option>
                     <option value="LIGHT">LIGHT (AGILE & FAST)</option>
                     <option value="HEAVY">HEAVY (ARMORED TANK)</option>
                 </select>
 
-                <div style="font-size: 11px; color: #aaa; margin-top:6px;">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">HUBUNGKAN FIREBASE...</span></div>
+                <div style="font-size: 11px; color: #aaa; margin-top:8px;">TARGET TOTAL PLAYER ARENA:</div>
+                <select id="target-players-select">
+                    <option value="8">8 TANK (SISA DIGANTI BOT AI)</option>
+                    <option value="4">4 TANK (SISA DIGANTI BOT AI)</option>
+                    <option value="2">2 TANK (1 VS 1 ATAU 1 BOT)</option>
+                </select>
+
+                <div style="font-size: 11px; color: #aaa; margin-top:6px;">SERVER: <span id="peer-status" style="color:#00ffcc;">FIREBASE READY</span></div>
                 
-                <button class="btn-ff" style="width:100%; margin-top:8px;" onclick="createRoom()">👑 BUAT ROOM (HOST)</button>
+                <button class="btn-ff" style="width:100%; margin-top:8px;" onclick="createRoom()">👑 BUAT ROOM MABAR (HOST)</button>
                 
-                <div id="host-info" style="display:none;">
+                <!-- SLOT ROOM MULTIPLAYER -->
+                <div id="lobby-slot-info" style="display:none; margin-top:10px;">
                     <div class="room-code-display" id="room-code-tag">CODE: ----</div>
-                    <div style="font-size:11px; color:#00ffcc; margin-bottom:5px;" id="connected-count">Pemain Terhubung: 1</div>
-                    <button class="btn-ff btn-start" style="width:100%;" onclick="startOnlineMatch()">🚀 MULAI MATCH 3 RONDE</button>
+                    <div style="font-size:11px; color:#00ffcc;">SLOT LOBBY MABAR:</div>
+                    <div class="player-list-grid" id="player-slots-container">
+                        <!-- Slots generate dinamik -->
+                    </div>
+                    <button class="btn-ff btn-start" id="start-btn-host" style="width:100%; display:none;" onclick="startOnlineMatch()">🚀 MULAI MATCH (AUTO-FILL BOT)</button>
                 </div>
 
                 <div style="margin: 8px 0 4px 0; font-weight: bold; font-size:11px;">--- MASUK ROOM TEMAN ---</div>
                 <input type="text" id="join-room-input" placeholder="KODE ROOM (4 DIGIT)" maxlength="4">
-                <button class="btn-ff btn-sub" style="width:100%; margin-top:6px;" onclick="joinRoom()">🎮 MASUK ROOM</button>
+                <button class="btn-ff btn-sub" style="width:100%; margin-top:6px;" onclick="joinRoom()">🎮 GABUNG MABAR</button>
             </div>
             
             <button class="btn-ff btn-sub" onclick="toggleFullscreen()">📺 FULLSCREEN MODE</button>
@@ -193,11 +210,8 @@
             appId: "APP_ID"
         };
 
-        // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        document.getElementById('peer-status').innerText = "FIREBASE SIAP!";
 
         // AUDIO SYNTHESIZER
         const actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -289,6 +303,7 @@
         let mySlot = 0, isHost = false, currentRoomCode = "";
         let isAutoFireActive = false;
         let roomRef = null;
+        let activePlayersMap = {}; // Menyimpan data slot player mabar
 
         let currentRound = 1;
         const TOTAL_ROUNDS = 3;
@@ -313,7 +328,7 @@
         }
 
         // ==========================================================
-        // 2. SISTEM MULTIPLAYER BERBASIS FIREBASE DATABASE
+        // 2. SISTEM MULTIPLAYER & LOBBY AUTO-BOT
         // ==========================================================
 
         function createRoom() {
@@ -324,29 +339,25 @@
 
             roomRef = db.ref('rooms/' + roomCode);
 
-            // Inisialisasi struktur room di Firebase
+            // Inisialisasi room di Firebase
             roomRef.set({
                 status: 'waiting',
                 currentRound: 1,
-                playersCount: 1,
+                targetPlayers: parseInt(document.getElementById('target-players-select').value),
                 events: { type: 'NONE' }
             });
 
-            // Otomatis hapus room jika Host disconnect
+            // Slot Host
+            db.ref(`rooms/${roomCode}/players/0`).set({ role: selectedRole, isBot: false });
+            db.ref(`rooms/${roomCode}/players/0`).onDisconnect().remove();
             roomRef.onDisconnect().remove();
-
-            // Dengarkan perubahan jumlah pemain
-            db.ref(`rooms/${roomCode}/players`).on('value', snapshot => {
-                let players = snapshot.val();
-                let count = players ? Object.keys(players).length : 1;
-                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count}`;
-            });
 
             setupRoomListeners();
 
-            document.getElementById('host-info').style.display = 'block';
-            document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
-            speakIndo(`Room dibuat! Kode ${roomCode}.`);
+            document.getElementById('lobby-slot-info').style.display = 'block';
+            document.getElementById('start-btn-host').style.display = 'block';
+            document.getElementById('room-code-tag').innerText = "KODE MABAR: " + roomCode;
+            speakIndo(`Room Mabar Dibuat! Kode ${roomCode}. Bagikan ke temanmu!`);
         }
 
         function joinRoom() {
@@ -359,7 +370,7 @@
 
             roomRef.once('value', snapshot => {
                 if(!snapshot.exists()) {
-                    alert("Room tidak ditemukan!");
+                    alert("Room Mabar tidak ditemukan!");
                     return;
                 }
 
@@ -367,7 +378,6 @@
                     let players = pSnap.val() || {};
                     let occupiedSlots = Object.keys(players);
                     
-                    // Mencari slot kosong (0-7)
                     for(let i=1; i<8; i++) {
                         if(!occupiedSlots.includes(i.toString())) {
                             mySlot = i;
@@ -377,7 +387,7 @@
 
                     db.ref(`rooms/${code}/players/${mySlot}`).set({
                         role: selectedRole,
-                        active: true
+                        isBot: false
                     });
 
                     db.ref(`rooms/${code}/players/${mySlot}`).onDisconnect().remove();
@@ -386,21 +396,47 @@
                         document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
                     }
 
+                    document.getElementById('lobby-slot-info').style.display = 'block';
+                    document.getElementById('room-code-tag').innerText = "KODE MABAR: " + code;
                     setupRoomListeners();
-                    speakIndo("Berhasil masuk ke Room " + code);
+                    speakIndo("Berhasil bergabung ke Room Mabar!");
                 });
             });
         }
 
+        function updateLobbyUI(players) {
+            let container = document.getElementById('player-slots-container');
+            container.innerHTML = '';
+            let targetCount = parseInt(document.getElementById('target-players-select').value) || 8;
+
+            for(let i=0; i<targetCount; i++) {
+                let slotDiv = document.createElement('div');
+                if(players && players[i]) {
+                    slotDiv.className = 'player-slot occupied';
+                    slotDiv.innerText = `P${i+1} [USER]`;
+                } else {
+                    slotDiv.className = 'player-slot bot';
+                    slotDiv.innerText = `P${i+1} [BOT]`;
+                }
+                container.appendChild(slotDiv);
+            }
+        }
+
         function setupRoomListeners() {
-            // Dengarkan Events Global (Start Match, Shake, Jury Voice, Fire, Posisi)
+            // Update UI Slot Mabar Realtime
+            db.ref(`rooms/${currentRoomCode}/players`).on('value', snapshot => {
+                activePlayersMap = snapshot.val() || {};
+                updateLobbyUI(activePlayersMap);
+            });
+
+            // Dengarkan Event Game Global
             roomRef.child('events').on('value', snapshot => {
                 let data = snapshot.val();
                 if(!data) return;
                 handleData(data);
             });
 
-            // Dengarkan Gerakan Posisi Pemain Lain
+            // Sync Posisi Tank Multiplayer
             roomRef.child('positions').on('child_changed', snapshot => {
                 let data = snapshot.val();
                 if(data && data.slot !== mySlot) {
@@ -426,26 +462,20 @@
         function startOnlineMatch() {
             if(!isHost) return;
             currentRound = 1;
-            broadcast({ type: 'START_MATCH', round: 1 });
-            initFullMatch();
+            let targetCount = parseInt(document.getElementById('target-players-select').value) || 8;
+            broadcast({ type: 'START_MATCH', round: 1, targetCount: targetCount });
+            initFullMatch(targetCount);
         }
 
-        function triggerJuryVoice(text) {
-            broadcast({ type: 'JURY_VOICE', text: text });
-            speakIndo(text);
-        }
-
-        function triggerShakeArena() {
-            broadcast({ type: 'SHAKE' });
-            shakeScreen();
-        }
+        function triggerJuryVoice(text) { broadcast({ type: 'JURY_VOICE', text: text }); speakIndo(text); }
+        function triggerShakeArena() { broadcast({ type: 'SHAKE' }); shakeScreen(); }
 
         let shakeTime = 0;
         function shakeScreen() { shakeTime = 5; }
 
         function handleData(data) {
             if(data.type === 'START_MATCH') {
-                currentRound = data.round || 1; initFullMatch();
+                currentRound = data.round || 1; initFullMatch(data.targetCount || 8);
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
             } else if(data.type === 'FIRE') {
@@ -455,9 +485,9 @@
             } else if(data.type === 'SHAKE') {
                 shakeScreen();
             } else if(data.type === 'RESET_ROOM') {
-                currentRound = 1; initFullMatch();
+                currentRound = 1; initFullMatch(data.targetCount || 8);
                 document.getElementById('win-screen').style.display = 'none';
-                speakIndo("Match di-reset! Silakan tanding lagi!");
+                speakIndo("Match Mabar di-reset!");
             }
         }
 
@@ -514,13 +544,17 @@
             return baseColor;
         }
 
-        function initFullMatch() {
+        // INISIALISASI MATCH DENGAN AUTO-FILL BOT
+        function initFullMatch(targetCount = 8) {
             currentRound = 1;
             let chosenClass = document.getElementById('class-select').value;
 
             tanks = [];
-            for(let i=0; i<8; i++) {
-                let isBot = (i !== mySlot && !isHost);
+            for(let i=0; i<targetCount; i++) {
+                // Deteksi apakah slot ini adalah Player Mabar Asli atau AI Bot
+                let isHumanPlayer = !!activePlayersMap[i];
+                let isBot = !isHumanPlayer;
+
                 let cStats = getClassStats(isBot ? 'MEDIUM' : chosenClass);
 
                 tanks.push({
@@ -581,7 +615,7 @@
                 document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
             }
 
-            speakIndo(`Ronde ${currentRound} dimulai! Selamat bertanding!`);
+            speakIndo(`Ronde ${currentRound} dimulai! Arena Mabar Siap!`);
 
             if(powerupInterval) clearInterval(powerupInterval);
             powerupInterval = setInterval(() => { if(!isGameOver) spawnPowerup(); }, 6000);
@@ -630,9 +664,10 @@
         }
 
         function resetOnlineRoom() {
-            initFullMatch();
-            broadcast({ type: 'RESET_ROOM' });
-            speakIndo("Match di-reset! Pertandingan diulang.");
+            let targetCount = parseInt(document.getElementById('target-players-select').value) || 8;
+            initFullMatch(targetCount);
+            broadcast({ type: 'RESET_ROOM', targetCount: targetCount });
+            speakIndo("Match Mabar Di-reset!");
         }
 
         function fire(t, isLocal = true) {
@@ -655,7 +690,7 @@
                     bullets.push({ 
                         x: spawnX, y: spawnY, 
                         vx: Math.cos(rad + offset) * 15, vy: Math.sin(rad + offset) * 15,
-                        id: t.id, c: wColor, dmg: 45, rad: 6, isSharp: true 
+                        id: t.id, c: wColor, dmg: 45, rad: 6 
                     });
                 });
             } else if(t.weapon === 'PLASMA') {
@@ -663,7 +698,7 @@
                 bullets.push({ 
                     x: spawnX, y: spawnY, 
                     vx: Math.cos(rad) * 22, vy: Math.sin(rad) * 22,
-                    id: t.id, c: wColor, dmg: 55, rad: 5, isLaser: true 
+                    id: t.id, c: wColor, dmg: 55, rad: 5 
                 });
             } else if(t.weapon === 'HEAVY_CANNON') {
                 playSound('heavy');
@@ -677,7 +712,7 @@
                 bullets.push({ 
                     x: spawnX, y: spawnY, 
                     vx: Math.cos(rad) * 15, vy: Math.sin(rad) * 15,
-                    id: t.id, c: wColor, dmg: 35, rad: 5, isSharp: true 
+                    id: t.id, c: wColor, dmg: 35, rad: 5 
                 });
             }
 
@@ -707,13 +742,14 @@
             }
         }
 
+        // LOGIKA KECERDASAN BUATAN (AI BOT)
         function updateAI(bot) {
             if(!bot.alive || !isHost) return;
             let now = Date.now();
             let targets = tanks.filter(t => t.alive && t.id !== bot.id);
             if(targets.length === 0) return;
 
-            if(now - bot.lastBotMove > 650) {
+            if(now - bot.lastBotMove > 500) {
                 bot.lastBotMove = now;
                 let closest = targets[0];
                 let minDist = Math.hypot(closest.x - bot.x, closest.y - bot.y);
@@ -731,7 +767,7 @@
             bot.vx += Math.cos(rad) * bot.accel;
             bot.vy += Math.sin(rad) * bot.accel;
 
-            if(now - bot.lastBotFire > 1000) {
+            if(now - bot.lastBotFire > 900) {
                 bot.lastBotFire = now;
                 fire(bot, false);
             }
@@ -927,7 +963,7 @@
             let champ = sortedTanks[0];
 
             document.getElementById('win-title').innerText = "GRAND CHAMPION!";
-            document.getElementById('win-sub').innerText = `JUARA MATCH 3 RONDE: TANK ${champ.id}`;
+            document.getElementById('win-sub').innerText = `JUARA MATCH: TANK ${champ.id} ${champ.isBot ? '(BOT)' : '(PLAYER)'}`;
             speakIndo(`SELAMAT UNTUK Tank ${champ.id}! JUARA UMUM MATCH 3 RONDE!`);
 
             let tbody = document.getElementById('leaderboard-body');
@@ -937,7 +973,7 @@
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>#${index+1} ${index===0 ? '🏆' : ''}</td>
-                    <td style="color:${t.color}; font-weight:bold;">Tank ${t.id} ${t.isBot ? '(BOT)' : ''}</td>
+                    <td style="color:${t.color}; font-weight:bold;">Tank ${t.id} ${t.isBot ? '(BOT)' : '(PLAYER)'}</td>
                     <td>${t.kills}</td>
                     <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
                 `;
