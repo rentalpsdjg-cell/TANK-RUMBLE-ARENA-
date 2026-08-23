@@ -94,10 +94,10 @@
             padding: 10px 16px; border-radius: 8px; font-weight: 900; font-size: 12px; cursor: pointer;
         }
 
-        /* MODAL SCREEN */
+        /* MODAL SCREEN & DYNAMIC OVERLAY */
         .modal-screen { 
             position: absolute; inset: 0; background: rgba(2, 3, 8, 0.97); 
-            display: flex; flex-direction: column; justify-content: flex-start; align-items: center; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
             z-index: 100; backdrop-filter: blur(12px); overflow-y: auto; padding: clamp(8px, 2vh, 16px); 
         }
         .menu-title { font-size: clamp(16px, 3vh, 24px); font-weight: 900; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; text-align: center; }
@@ -220,7 +220,7 @@
                 <div class="section-label">3. SENJATA UTAMA:</div>
                 <select id="weapon-select">
                     <option value="cannon">💥 CANNON (PELURU STANDAR)</option>
-                    <option value="shotgun">🔱 SHOTGUN (3 PELURU SEBAR)</option>
+                    <option value="shotgun">ff SHOTGUN (3 PELURU SEBAR)</option>
                     <option value="rocket">🚀 ROCKET (RUDAL AREA BLAST)</option>
                 </select>
 
@@ -285,23 +285,25 @@
             </div>
         </div>
 
-        <!-- WIN/LEADERBOARD MODAL -->
+        <!-- WIN/LEADERBOARD DYNAMIC OVERLAY MODAL -->
         <div id="win-screen" class="modal-screen" style="display:none;">
-            <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
-            <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH</div>
-            
-            <div style="width: 100%; max-width: 380px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr><th>Peringkat</th><th>Pemain</th><th>Kills</th><th>Skor</th></tr>
-                    </thead>
-                    <tbody id="leaderboard-body">
-                    </tbody>
-                </table>
+            <div class="main-panel" style="align-items: center; border-color: #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
+                <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
+                <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH</div>
+                
+                <div style="width: 100%; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 8px; padding: 8px; margin: 4px 0;">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr><th>Peringkat</th><th>Pemain</th><th>Kills</th><th>Skor</th></tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <button class="btn-ff btn-reset" style="width:100%; margin-top:6px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
+                <button class="btn-ff btn-sub" style="width:100%; margin-top:4px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
             </div>
-            
-            <button class="btn-ff btn-reset" style="max-width:300px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
-            <button class="btn-ff btn-sub" style="max-width:300px; margin-top:4px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
         </div>
     </div>
 
@@ -367,13 +369,20 @@
             }
         }
 
+        // PERBAIKAN SISTEM SUARA FALLBACK
         function speakIndo(text) {
             if(!voiceEnabled) return;
-            if('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(text);
-                msg.lang = 'id-ID'; msg.rate = 1.15;
-                window.speechSynthesis.speak(msg);
+            try {
+                if('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    let msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'id-ID'; 
+                    msg.rate = 1.15;
+                    msg.onerror = function() { console.warn("TTS gagal dijalankan, lanjut tanpa audio voice."); };
+                    window.speechSynthesis.speak(msg);
+                }
+            } catch (err) {
+                console.warn("Sistem browser memblokir Web Speech API:", err);
             }
         }
 
@@ -393,6 +402,8 @@
         let maxPlayersLimit = 2; const PREFIX = "TRVIPFULL-";
 
         let currentRound = 1; const TOTAL_ROUNDS = 3;
+        let isRoundEnding = false; // PENGUNCI RONDE ANTI-SANGKUT
+
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
         let isAutoFire = true;
@@ -475,7 +486,6 @@
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
                     let sendInit = () => { 
                         conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
-                        // Synchronize initial powerups
                         powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
                     };
                     sendInit(); setTimeout(sendInit, 500);
@@ -534,7 +544,7 @@
             else if(hostConn && hostConn.open) hostConn.send(data);
         }
 
-        // --- NETWORK HANDLER (PERBAIKAN SMOOTH LERP) ---
+        // --- NETWORK HANDLER (LERP SMOOTH) ---
         function handleData(data) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
@@ -546,7 +556,6 @@
                 currentRound = data.round; startNextRound();
             } else if(data.type === 'SYNC_POS') {
                 if(tanks[data.slot] && data.slot !== mySlot) {
-                    // Update target koordinat & sudut (Bukan langsung dipindah)
                     tanks[data.slot].targetX = data.x; 
                     tanks[data.slot].targetY = data.y; 
                     tanks[data.slot].targetAngle = data.angle;
@@ -629,6 +638,7 @@
 
         function initFullMatch(mapType = 0, weaponType = 'cannon') {
             currentRound = 1;
+            isRoundEnding = false;
             let totalPlayers = isBotMode ? maxPlayersLimit : (isHost ? (connections.length + 1) : maxPlayersLimit);
 
             let diff = document.getElementById('bot-difficulty').value;
@@ -640,7 +650,7 @@
                 tanks.push({
                     id: i, isBot: isBot, name: isBot ? `BOT ${i+1}` : `P${i+1}`,
                     x: 0, y: 0, angle: 90,
-                    targetX: 0, targetY: 0, targetAngle: 90, // Variabel interpolasi
+                    targetX: 0, targetY: 0, targetAngle: 90,
                     color: i === mySlot && !isSpectator ? selectedColor : defaultColors[i % defaultColors.length],
                     hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
                     spd: (2.5 + (i===mySlot && !isSpectator ? stats.spd*0.4 : 0.4)) * (isBot ? botSpdMulti : 1),
@@ -667,12 +677,12 @@
                 let sa = spawnCoords[i%8].angle;
 
                 t.x = sx; t.y = sy; t.angle = sa;
-                t.targetX = sx; t.targetY = sy; t.targetAngle = sa; // Reset target LERP
+                t.targetX = sx; t.targetY = sy; t.targetAngle = sa;
 
                 t.hp = t.maxHp; t.alive = true; t.activePowerUp = null; t.powerUpTimer = 0; t.shieldTimer = 0;
             });
 
-            bullets = []; particles = []; powerUps = []; isGameOver = false; powerUpSpawnTimer = 0;
+            bullets = []; particles = []; powerUps = []; isGameOver = false; isRoundEnding = false; powerUpSpawnTimer = 0;
 
             document.getElementById('round-indicator').innerText = `ROUND ${currentRound}/${TOTAL_ROUNDS}`;
             document.getElementById('menu-screen').style.display = 'none';
@@ -852,8 +862,12 @@
             }
         }
 
+        // PENGUNCI RONDE ANTI-SANGKUT
         function handleRoundEnd(roundWinner) {
+            if (isRoundEnding) return; 
+            isRoundEnding = true; 
             isGameOver = true;
+
             if(roundWinner) roundWinner.score += 200;
 
             if(currentRound < TOTAL_ROUNDS) {
@@ -895,7 +909,6 @@
                     if(moved && !checkWallCollision(nextX, nextY)) {
                         p.x = nextX; p.y = nextY;
                         
-                        // BROADCAST HANYA TIAP 50ms (TICK RATE 20Hz)
                         let now = Date.now();
                         if(!isBotMode && now - lastNetworkSend > 50) {
                             lastNetworkSend = now;
@@ -910,11 +923,9 @@
                 if(t.isBot) {
                     updateBotLogic(t);
                 } else if(t.id !== mySlot && t.alive) {
-                    // Muluskan Posisi (Lerp 0.25)
                     t.x += (t.targetX - t.x) * 0.25;
                     t.y += (t.targetY - t.y) * 0.25;
 
-                    // Muluskan Rotasi
                     let diff = t.targetAngle - t.angle;
                     if (diff > 180) diff -= 360;
                     if (diff < -180) diff += 360;
