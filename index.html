@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FIX POWER-UP SYNC & LERP SMOOTH</title>
+    <title>TANK RUMBLE VIP - FIX MULTIPLAYER ONLINE & SMOOTH</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -94,10 +94,10 @@
             padding: 10px 16px; border-radius: 8px; font-weight: 900; font-size: 12px; cursor: pointer;
         }
 
-        /* MODAL SCREEN & DYNAMIC OVERLAY */
+        /* MODAL SCREEN */
         .modal-screen { 
             position: absolute; inset: 0; background: rgba(2, 3, 8, 0.97); 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: center; 
             z-index: 100; backdrop-filter: blur(12px); overflow-y: auto; padding: clamp(8px, 2vh, 16px); 
         }
         .menu-title { font-size: clamp(16px, 3vh, 24px); font-weight: 900; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; text-align: center; }
@@ -220,7 +220,7 @@
                 <div class="section-label">3. SENJATA UTAMA:</div>
                 <select id="weapon-select">
                     <option value="cannon">💥 CANNON (PELURU STANDAR)</option>
-                    <option value="shotgun">ff SHOTGUN (3 PELURU SEBAR)</option>
+                    <option value="shotgun">🔱 SHOTGUN (3 PELURU SEBAR)</option>
                     <option value="rocket">🚀 ROCKET (RUDAL AREA BLAST)</option>
                 </select>
 
@@ -285,25 +285,23 @@
             </div>
         </div>
 
-        <!-- WIN/LEADERBOARD DYNAMIC OVERLAY MODAL -->
+        <!-- WIN/LEADERBOARD MODAL -->
         <div id="win-screen" class="modal-screen" style="display:none;">
-            <div class="main-panel" style="align-items: center; border-color: #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.3);">
-                <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
-                <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH</div>
-                
-                <div style="width: 100%; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 8px; padding: 8px; margin: 4px 0;">
-                    <table class="leaderboard-table">
-                        <thead>
-                            <tr><th>Peringkat</th><th>Pemain</th><th>Kills</th><th>Skor</th></tr>
-                        </thead>
-                        <tbody id="leaderboard-body">
-                        </tbody>
-                    </table>
-                </div>
-                
-                <button class="btn-ff btn-reset" style="width:100%; margin-top:6px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
-                <button class="btn-ff btn-sub" style="width:100%; margin-top:4px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
+            <div id="win-title" class="menu-title" style="color:#00ffcc;">GRAND CHAMPION!</div>
+            <div id="win-sub" class="menu-sub" style="color:#ffaa00;">HASIL AKHIR MATCH</div>
+            
+            <div style="width: 100%; max-width: 380px; background: rgba(10,12,22,0.9); border: 1px solid #00ffcc; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr><th>Peringkat</th><th>Pemain</th><th>Kills</th><th>Skor</th></tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                    </tbody>
+                </table>
             </div>
+            
+            <button class="btn-ff btn-reset" style="max-width:300px;" onclick="resetOnlineRoom()">🔄 MAIN LAGI</button>
+            <button class="btn-ff btn-sub" style="max-width:300px; margin-top:4px;" onclick="exitGame()">🏠 KEMBALI KE LOBBY</button>
         </div>
     </div>
 
@@ -369,20 +367,13 @@
             }
         }
 
-        // PERBAIKAN SISTEM SUARA FALLBACK
         function speakIndo(text) {
             if(!voiceEnabled) return;
-            try {
-                if('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    let msg = new SpeechSynthesisUtterance(text);
-                    msg.lang = 'id-ID'; 
-                    msg.rate = 1.15;
-                    msg.onerror = function() { console.warn("TTS gagal dijalankan, lanjut tanpa audio voice."); };
-                    window.speechSynthesis.speak(msg);
-                }
-            } catch (err) {
-                console.warn("Sistem browser memblokir Web Speech API:", err);
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'id-ID'; msg.rate = 1.15;
+                window.speechSynthesis.speak(msg);
             }
         }
 
@@ -396,18 +387,17 @@
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let isSpectator = false;
-        let spectatorTargetIndex = -1; // -1 = Arena Bebas
+        let spectatorTargetIndex = -1;
 
         let connections = []; let hostConn = null;
         let maxPlayersLimit = 2; const PREFIX = "TRVIPFULL-";
 
         let currentRound = 1; const TOTAL_ROUNDS = 3;
-        let isRoundEnding = false; // PENGUNCI RONDE ANTI-SANGKUT
-
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
         let isAutoFire = true;
-        let lastNetworkSend = 0; // Timer untuk Tick Rate 20Hz (50ms)
+        let lastNetworkSend = 0;
+        let animationFrameId = null;
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
@@ -453,9 +443,9 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        // --- MULTIPLAYER ENGINE ---
+        // --- MULTIPLAYER ENGINE FIX ---
         function initPeerServer(customId = null) {
-            if(peer) peer.destroy();
+            if(peer) { try { peer.destroy(); } catch(e){} }
             let config = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
             return customId ? new Peer(customId, config) : new Peer(config);
         }
@@ -484,15 +474,22 @@
 
                 conn.on('open', () => {
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
-                    let sendInit = () => { 
-                        conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
-                        powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
-                    };
-                    sendInit(); setTimeout(sendInit, 500);
+                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
+                    
+                    // Broadcast info tank baru ke seluruh player lain
+                    broadcast({ type: 'UPDATE_PLAYERS', total: connections.length + 1 });
+                    
+                    // Sync powerups yang ada di map
+                    powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
                 });
 
-                conn.on('data', data => handleData(data));
-                conn.on('close', () => { setNetStatus("TEMAN TERPUTUS!", "#ff0055"); updateConnectedStatus(); });
+                conn.on('data', data => handleData(data, assignedSlot));
+                conn.on('close', () => { 
+                    connections = connections.filter(c => c !== conn);
+                    setNetStatus("TEMAN TERPUTUS!", "#ff0055"); 
+                    updateConnectedStatus(); 
+                });
+                conn.on('error', err => console.log("Conn Error:", err));
             });
 
             peer.on('error', err => setNetStatus("GAGAL BUAT ROOM, COBA LAGI", "#ff0055"));
@@ -514,8 +511,9 @@
                     speakIndo(isSpectator ? "Mode Juri Aktif" : "Berhasil terhubung!"); 
                 });
 
-                hostConn.on('data', data => handleData(data));
+                hostConn.on('data', data => handleData(data, 0));
                 hostConn.on('close', () => setNetStatus("TERPUTUS DARI HOST!", "#ff0055"));
+                hostConn.on('error', err => setNetStatus("ERROR KONEKSI HOST!", "#ff0055"));
             });
 
             peer.on('error', err => setNetStatus("KODE ROOM SALAH / TIDAK DITEMUKAN!", "#ff0055"));
@@ -540,12 +538,15 @@
 
         function broadcast(data) {
             if(isBotMode) return;
-            if(isHost) connections.forEach(c => { if(c.open) c.send(data); });
-            else if(hostConn && hostConn.open) hostConn.send(data);
+            if(isHost) {
+                connections.forEach(c => { if(c && c.open) c.send(data); });
+            } else if(hostConn && hostConn.open) {
+                hostConn.send(data);
+            }
         }
 
-        // --- NETWORK HANDLER (LERP SMOOTH) ---
-        function handleData(data) {
+        // --- NETWORK HANDLER REVISED ---
+        function handleData(data, senderSlot) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
                 document.getElementById('player-id-tag').innerText = isSpectator ? "👨‍⚖️ JURI" : `P${mySlot+1} (KAMU)`;
@@ -555,18 +556,29 @@
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
             } else if(data.type === 'SYNC_POS') {
+                // Jika data dari client ke Host, Host teruskan (relay) ke client lain
+                if(isHost && senderSlot !== undefined) {
+                    connections.forEach((c, idx) => {
+                        if((idx + 1) !== senderSlot && c && c.open) c.send(data);
+                    });
+                }
                 if(tanks[data.slot] && data.slot !== mySlot) {
                     tanks[data.slot].targetX = data.x; 
                     tanks[data.slot].targetY = data.y; 
                     tanks[data.slot].targetAngle = data.angle;
                 }
             } else if(data.type === 'FIRE') {
+                if(isHost && senderSlot !== undefined) {
+                    connections.forEach((c, idx) => {
+                        if((idx + 1) !== senderSlot && c && c.open) c.send(data);
+                    });
+                }
                 if(tanks[data.slot]) fire(tanks[data.slot], false);
             } else if(data.type === 'RESET_ROOM') {
                 currentRound = 1; initFullMatch(0, 'cannon');
                 document.getElementById('win-screen').style.display = 'none';
             } else if(data.type === 'SPAWN_POWERUP') {
-                powerUps.push(data.item);
+                if(!powerUps.some(p => p.id === data.item.id)) powerUps.push(data.item);
             } else if(data.type === 'REMOVE_POWERUP') {
                 powerUps = powerUps.filter(p => p.id !== data.id);
                 if(tanks[data.slot]) {
@@ -638,7 +650,6 @@
 
         function initFullMatch(mapType = 0, weaponType = 'cannon') {
             currentRound = 1;
-            isRoundEnding = false;
             let totalPlayers = isBotMode ? maxPlayersLimit : (isHost ? (connections.length + 1) : maxPlayersLimit);
 
             let diff = document.getElementById('bot-difficulty').value;
@@ -682,7 +693,7 @@
                 t.hp = t.maxHp; t.alive = true; t.activePowerUp = null; t.powerUpTimer = 0; t.shieldTimer = 0;
             });
 
-            bullets = []; particles = []; powerUps = []; isGameOver = false; isRoundEnding = false; powerUpSpawnTimer = 0;
+            bullets = []; particles = []; powerUps = []; isGameOver = false; powerUpSpawnTimer = 0;
 
             document.getElementById('round-indicator').innerText = `ROUND ${currentRound}/${TOTAL_ROUNDS}`;
             document.getElementById('menu-screen').style.display = 'none';
@@ -703,7 +714,9 @@
             }
 
             speakIndo(`Ronde ${currentRound} dimulai!`);
-            requestAnimationFrame(loop);
+            
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(loop);
         }
 
         function nextTarget() {
@@ -734,15 +747,20 @@
         window.addEventListener('keydown', e => keys[e.key] = true);
         window.addEventListener('keyup', e => keys[e.key] = false);
 
+        // --- BIND TOUCH PERBAIKAN STUCK MOVE ---
         function bindTouch(id, keyName) {
             let el = document.getElementById(id);
             if(!el) return;
-            const press = (e) => { e.preventDefault(); keys[keyName] = true; };
-            const release = (e) => { e.preventDefault(); keys[keyName] = false; };
+
+            const press = (e) => { if(e.cancelable) e.preventDefault(); keys[keyName] = true; };
+            const release = (e) => { if(e.cancelable) e.preventDefault(); keys[keyName] = false; };
+
             el.addEventListener('touchstart', press, {passive: false});
             el.addEventListener('touchend', release, {passive: false});
+            el.addEventListener('touchcancel', release, {passive: false});
             el.addEventListener('mousedown', press);
             el.addEventListener('mouseup', release);
+            el.addEventListener('mouseleave', release);
         }
 
         bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
@@ -862,12 +880,8 @@
             }
         }
 
-        // PENGUNCI RONDE ANTI-SANGKUT
         function handleRoundEnd(roundWinner) {
-            if (isRoundEnding) return; 
-            isRoundEnding = true; 
             isGameOver = true;
-
             if(roundWinner) roundWinner.score += 200;
 
             if(currentRound < TOTAL_ROUNDS) {
@@ -910,7 +924,7 @@
                         p.x = nextX; p.y = nextY;
                         
                         let now = Date.now();
-                        if(!isBotMode && now - lastNetworkSend > 50) {
+                        if(!isBotMode && now - lastNetworkSend > 40) { // Sync 25Hz untuk multiplayer cepat
                             lastNetworkSend = now;
                             broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
                         }
@@ -918,13 +932,13 @@
                 }
             }
 
-            // 2. INTERPOLASI (LERP) UNTUK TANK NETWORK / LAWAN
+            // 2. INTERPOLASI (LERP) TANK NETWORK / LAWAN
             tanks.forEach(t => { 
                 if(t.isBot) {
                     updateBotLogic(t);
                 } else if(t.id !== mySlot && t.alive) {
-                    t.x += (t.targetX - t.x) * 0.25;
-                    t.y += (t.targetY - t.y) * 0.25;
+                    t.x += (t.targetX - t.x) * 0.3;
+                    t.y += (t.targetY - t.y) * 0.3;
 
                     let diff = t.targetAngle - t.angle;
                     if (diff > 180) diff -= 360;
@@ -1138,7 +1152,11 @@
             }
         }
 
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        function loop() { 
+            update(); 
+            draw(); 
+            animationFrameId = requestAnimationFrame(loop); 
+        }
     </script>
 </body>
 </html>
