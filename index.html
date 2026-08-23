@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - ULTIMATE FIXED</title>
+    <title>TANK RUMBLE VIP - FIX MULTIPLAYER START</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -21,7 +21,6 @@
             padding: 4px;
         }
 
-        /* HUD TOP PANEL FIXED FIT */
         .hud-layer { 
             width: 100%; 
             max-width: 500px;
@@ -47,7 +46,6 @@
         .hp-bar-bg { width: 90px; height: 8px; background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
-        /* CANVAS SCALING PAS DI LAYAR */
         .canvas-wrapper {
             flex: 1;
             width: 100%;
@@ -68,7 +66,6 @@
             border-radius: 8px; 
         }
 
-        /* BOTTOM CONTROLS PANEL PAS DITAMBAH TOUCH TARGET LEBIH NYAMAN */
         .controls-overlay { 
             width: 100%; 
             max-width: 500px; 
@@ -116,7 +113,6 @@
         }
         .btn-auto-fire.active { background: #ffaa00; color: #000; }
 
-        /* MODAL POPUPS */
         .modal-screen { 
             position: absolute; inset: 0; background: rgba(2, 3, 8, 0.97); 
             display: flex; flex-direction: column; justify-content: flex-start; align-items: center; 
@@ -420,7 +416,7 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        // --- MULTIPLAYER P2P STUN SYSTEM ---
+        // --- MULTIPLAYER FIX SYSTEM ---
         function initPeerServer(customId = null) {
             if(peer) peer.destroy();
             let config = {
@@ -458,12 +454,21 @@
                 let assignedSlot = connections.length;
 
                 conn.on('open', () => {
-                    setNetStatus(`P${assignedSlot+1} TERHUBUNG!`, "#00ff66");
-                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit });
+                    setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
+                    
+                    // Send Slot Data Multiple Times to Ensure Reception
+                    let sendInit = () => {
+                        conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit });
+                    };
+                    sendInit();
+                    setTimeout(sendInit, 500);
                 });
 
                 conn.on('data', data => handleData(data));
-                conn.on('close', () => setNetStatus("TEMAN TERPUTUS!", "#ff0055"));
+                conn.on('close', () => {
+                    setNetStatus("TEMAN TERPUTUS!", "#ff0055");
+                    updateConnectedStatus();
+                });
             });
 
             peer.on('error', err => setNetStatus("GAGAL BUAT ROOM, COBA LAGI", "#ff0055"));
@@ -481,7 +486,7 @@
                 hostConn = peer.connect(fullId, { reliable: true });
                 
                 hostConn.on('open', () => { 
-                    setNetStatus("BERHASIL MASUK! MENUNGGU START...", "#00ff66");
+                    setNetStatus("BERHASIL MASUK! MENUNGGU HOST START...", "#00ff66");
                     speakIndo("Berhasil terhubung!"); 
                 });
 
@@ -504,6 +509,7 @@
             isBotMode = false; currentRound = 1;
             let mapType = document.getElementById('map-select').value;
             let weaponType = document.getElementById('weapon-select').value;
+            
             broadcast({ type: 'START_MATCH', round: 1, maxPlayers: maxPlayersLimit, mapType: mapType, weaponType: weaponType });
             initFullMatch(mapType, weaponType);
         }
@@ -516,10 +522,12 @@
 
         function handleData(data) {
             if(data.type === 'INIT_SLOT') {
-                mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
+                mySlot = data.slot; 
+                maxPlayersLimit = data.maxPlayers;
                 document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
             } else if(data.type === 'START_MATCH') {
-                currentRound = data.round || 1; maxPlayersLimit = data.maxPlayers;
+                currentRound = data.round || 1; 
+                maxPlayersLimit = data.maxPlayers;
                 initFullMatch(data.mapType || 0, data.weaponType || 'cannon');
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round; startNextRound();
@@ -584,7 +592,7 @@
                 tanks.push({
                     id: i, isBot: isBot, name: isBot ? `BOT ${i+1}` : `P${i+1}`,
                     x: 0, y: 0, angle: 90,
-                    color: i === mySlot ? selectedColor : defaultColors[i],
+                    color: i === mySlot ? selectedColor : defaultColors[i % defaultColors.length],
                     hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
                     spd: (2.5 + (i===mySlot ? stats.spd*0.4 : 0.4)) * (isBot ? botSpdMulti : 1),
                     dmg: 35 + (i===mySlot ? stats.dmg*10 : 0),
@@ -616,7 +624,10 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'none';
-            document.getElementById('player-id-tag').innerText = `${tanks[mySlot].name} (KAMU)`;
+            
+            if(tanks[mySlot]) {
+                document.getElementById('player-id-tag').innerText = `${tanks[mySlot].name} (KAMU)`;
+            }
 
             speakIndo(`Ronde ${currentRound} dimulai!`);
             requestAnimationFrame(loop);
