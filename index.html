@@ -53,7 +53,7 @@
         canvas { 
             background: #030408; border: 2px solid #00ffcc; box-shadow: 0 0 15px rgba(0, 255, 204, 0.25); 
             max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 10px; 
-            touch-action: none;
+            touch-action: none; cursor: pointer;
         }
 
         /* CONTROLS OVERLAY */
@@ -213,8 +213,8 @@
 
                 <div class="section-label">2. KESULITAN BOT:</div>
                 <select id="bot-difficulty">
-                    <option value="easy">🟢 EASY (SANTAI)</option>
-                    <option value="medium" selected>🟡 MEDIUM (TAKTIKAL & TAKTIS)</option>
+                    <option value="easy">🟢 EASY (SANTAI & NORMAL)</option>
+                    <option value="medium" selected>🟡 MEDIUM (TAKTIKAL ~21 DETIK)</option>
                     <option value="hard">🔴 HARD (PRO PLAYER BOT)</option>
                 </select>
 
@@ -544,7 +544,7 @@
             }
         }
 
-        // --- NETWORK DATA HANDLER (SMOOTH & ULTRA SYNC) ---
+        // --- NETWORK DATA HANDLER ---
         function handleData(data, senderSlot) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
@@ -668,7 +668,7 @@
             let totalPlayers = isBotMode ? maxPlayersLimit : (isHost ? (connections.length + 1) : maxPlayersLimit);
 
             let diff = document.getElementById('bot-difficulty').value;
-            let botSpdMulti = diff === 'easy' ? 0.8 : (diff === 'hard' ? 1.15 : 0.95);
+            let botSpdMulti = diff === 'easy' ? 0.7 : (diff === 'hard' ? 1.15 : 0.85);
 
             tanks = [];
             for(let i=0; i<totalPlayers; i++) {
@@ -758,112 +758,62 @@
             }
         }
 
-        // --- DUAL FUNCTION & SWIPE CONTROLLER LOGIC ---
+        // --- CONTROLS LOGIC & DUAL TOUCH/KEYBOARD ---
         let keys = {};
-        const ctrlState = {
-            ArrowUp: { isHolding: false, timer: null },
-            ArrowDown: { isHolding: false, timer: null },
-            ArrowLeft: { isHolding: false, timer: null },
-            ArrowRight: { isHolding: false, timer: null }
-        };
-
-        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if(!tanks[mySlot] || !tanks[mySlot].alive) return;
+            if(e.key === 'ArrowUp' || e.key === 'w') tanks[mySlot].angle = 270;
+            if(e.key === 'ArrowDown' || e.key === 's') tanks[mySlot].angle = 90;
+            if(e.key === 'ArrowLeft' || e.key === 'a') tanks[mySlot].angle = 180;
+            if(e.key === 'ArrowRight' || e.key === 'd') tanks[mySlot].angle = 0;
+        });
         window.addEventListener('keyup', e => keys[e.key] = false);
 
-        function handleSingleTapAction(keyName) {
-            if (!tanks[mySlot] || !tanks[mySlot].alive) return;
-            if (keyName === 'ArrowUp') tanks[mySlot].angle = 270;
-            if (keyName === 'ArrowDown') tanks[mySlot].angle = 90;
-            if (keyName === 'ArrowLeft') tanks[mySlot].angle = 180;
-            if (keyName === 'ArrowRight') tanks[mySlot].angle = 0;
-
-            if(!isBotMode && !isSpectator) {
-                broadcast({ type: 'SYNC_POS', slot: mySlot, x: tanks[mySlot].x, y: tanks[mySlot].y, angle: tanks[mySlot].angle });
-            }
-        }
-
-        function bindTouch(id, keyName) {
+        function bindTouch(id, angle) {
             let el = document.getElementById(id);
             if(!el) return;
-
-            const HOLD_DELAY = 180;
-
-            const press = (e) => { 
-                if(e.cancelable) e.preventDefault(); 
-                clearTimeout(ctrlState[keyName].timer);
-
-                ctrlState[keyName].timer = setTimeout(() => {
-                    ctrlState[keyName].isHolding = true;
-                    keys[keyName] = true;
-                }, HOLD_DELAY);
+            const setAngle = (e) => {
+                if(e.cancelable) e.preventDefault();
+                if(tanks[mySlot] && tanks[mySlot].alive) tanks[mySlot].angle = angle;
             };
-
-            const release = (e) => { 
-                if(e.cancelable) e.preventDefault(); 
-                clearTimeout(ctrlState[keyName].timer);
-
-                if (!ctrlState[keyName].isHolding) {
-                    handleSingleTapAction(keyName);
-                }
-
-                ctrlState[keyName].isHolding = false;
-                keys[keyName] = false; 
-            };
-
-            el.addEventListener('touchstart', press, {passive: false});
-            el.addEventListener('touchend', release, {passive: false});
-            el.addEventListener('touchcancel', release, {passive: false});
-            el.addEventListener('mousedown', press);
-            el.addEventListener('mouseup', release);
-            el.addEventListener('mouseleave', release);
+            el.addEventListener('touchstart', setAngle, {passive: false});
+            el.addEventListener('mousedown', setAngle);
         }
 
-        bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
-        bindTouch('btn-l', 'ArrowLeft'); bindTouch('btn-r', 'ArrowRight');
+        bindTouch('btn-u', 270); bindTouch('btn-d', 90);
+        bindTouch('btn-l', 180); bindTouch('btn-r', 0);
 
-        // --- GESTURE SWIPE / USAP LAYAR CANVAS ---
-        let touchStartX = 0;
-        let touchStartY = 0;
-        const SWIPE_THRESHOLD = 25; 
+        // --- KEMUDI USAP & KLIK MOUSE (TOUCH & MOUSE DRAG/SWIPE) ---
+        let touchStartX = 0, touchStartY = 0;
+        const SWIPE_THRESHOLD = 20;
 
-        cvs.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-            }
-        }, { passive: true });
+        function handlePointerStart(x, y) {
+            touchStartX = x; touchStartY = y;
+        }
 
-        cvs.addEventListener('touchend', (e) => {
-            if (!tanks[mySlot] || !tanks[mySlot].alive || isSpectator || e.changedTouches.length === 0) return;
-
-            let touchEndX = e.changedTouches[0].clientX;
-            let touchEndY = e.changedTouches[0].clientY;
-
-            let diffX = touchEndX - touchStartX;
-            let diffY = touchEndY - touchStartY;
+        function handlePointerEnd(x, y) {
+            if (!tanks[mySlot] || !tanks[mySlot].alive || isSpectator) return;
+            let diffX = x - touchStartX, diffY = y - touchStartY;
 
             if (Math.abs(diffX) > SWIPE_THRESHOLD || Math.abs(diffY) > SWIPE_THRESHOLD) {
                 if (Math.abs(diffX) > Math.abs(diffY)) {
-                    // Usap Kanan / Kiri
-                    if (diffX > 0) tanks[mySlot].angle = 0;      // Kanan
-                    else tanks[mySlot].angle = 180;              // Kiri
+                    tanks[mySlot].angle = diffX > 0 ? 0 : 180;
                 } else {
-                    // Usap Bawah / Atas
-                    if (diffY > 0) tanks[mySlot].angle = 90;     // Bawah
-                    else tanks[mySlot].angle = 270;              // Atas
+                    tanks[mySlot].angle = diffY > 0 ? 90 : 270;
                 }
 
                 if (!isBotMode) {
-                    broadcast({
-                        type: 'SYNC_POS',
-                        slot: mySlot,
-                        x: tanks[mySlot].x,
-                        y: tanks[mySlot].y,
-                        angle: tanks[mySlot].angle
-                    });
+                    broadcast({ type: 'SYNC_POS', slot: mySlot, x: tanks[mySlot].x, y: tanks[mySlot].y, angle: tanks[mySlot].angle });
                 }
             }
-        }, { passive: true });
+        }
+
+        cvs.addEventListener('touchstart', e => { if (e.touches.length > 0) handlePointerStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+        cvs.addEventListener('touchend', e => { if (e.changedTouches.length > 0) handlePointerEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: true });
+
+        cvs.addEventListener('mousedown', e => handlePointerStart(e.clientX, e.clientY));
+        cvs.addEventListener('mouseup', e => handlePointerEnd(e.clientX, e.clientY));
 
         function openSettings() { document.getElementById('settings-screen').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settings-screen').style.display = 'none'; }
@@ -921,28 +871,26 @@
             }
         }
 
+        // --- BOT AI ---
         function updateBotLogic(bot) {
             if(!bot.alive || !bot.isBot || isGameOver) return;
             let centerBotX = bot.x + S/2, centerBotY = bot.y + S/2;
 
-            if(powerUps.length > 0 && Math.random() < 0.6) {
+            if(powerUps.length > 0 && Math.random() < 0.3) {
                 let p = powerUps[0];
                 let dxP = p.x - centerBotX, dyP = p.y - centerBotY;
-                if(Math.hypot(dxP, dyP) < 300) {
+                if(Math.hypot(dxP, dyP) < 250) {
                     if(Math.abs(dxP) > Math.abs(dyP)) bot.botDir = dxP > 0 ? 0 : 180;
                     else bot.botDir = dyP > 0 ? 90 : 270;
                 }
             }
 
-            let dangerBullet = null;
-            if(bot.difficulty !== 'easy') {
-                dangerBullet = bullets.find(b => b.id !== bot.id && Math.hypot(b.x - centerBotX, b.y - centerBotY) < 180);
-            }
+            let dangerBullet = bullets.find(b => b.id !== bot.id && Math.hypot(b.x - centerBotX, b.y - centerBotY) < 120);
 
             if(dangerBullet && bot.botEvadeTimer <= 0) {
                 let bulletAngle = Math.atan2(dangerBullet.vy, dangerBullet.vx) * 180 / Math.PI;
                 bot.botDir = Math.round((bulletAngle + 90) / 90) * 90;
-                bot.botEvadeTimer = 25;
+                bot.botEvadeTimer = 120;
             }
             if(bot.botEvadeTimer > 0) bot.botEvadeTimer--;
 
@@ -951,19 +899,21 @@
 
             let target = targets[0];
             let dx = (target.x + S/2) - centerBotX, dy = (target.y + S/2) - centerBotY;
-
             let alignedX = Math.abs(dx) < 45, alignedY = Math.abs(dy) < 45;
 
             bot.botChangeDirTimer--;
             if(bot.botChangeDirTimer <= 0) {
-                bot.botChangeDirTimer = 35;
-                if(alignedX || alignedY) bot.botDir = alignedX ? (dy > 0 ? 90 : 270) : (dx > 0 ? 0 : 180);
-                else bot.botDir = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
+                bot.botChangeDirTimer = 1260; 
+                if(alignedX || alignedY) {
+                    bot.botDir = alignedX ? (dy > 0 ? 90 : 270) : (dx > 0 ? 0 : 180);
+                } else {
+                    bot.botDir = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
+                }
             }
 
             let radDir = bot.botDir * Math.PI / 180;
-            let nextX = bot.x + Math.cos(radDir) * bot.spd;
-            let nextY = bot.y + Math.sin(radDir) * bot.spd;
+            let nextX = bot.x + Math.cos(radDir) * (bot.spd * 0.45); 
+            let nextY = bot.y + Math.sin(radDir) * (bot.spd * 0.45);
 
             if(!checkWallCollision(nextX, nextY)) {
                 bot.x = nextX; bot.y = nextY; bot.angle = bot.botDir;
@@ -971,10 +921,17 @@
                 bot.botDir = (bot.botDir + 90) % 360;
             }
 
+            // Screen Wrap AI
+            if (bot.x < -TANK_SIZE) bot.x = INTERNAL_RES;
+            else if (bot.x > INTERNAL_RES) bot.x = -TANK_SIZE;
+            if (bot.y < -TANK_SIZE) bot.y = INTERNAL_RES;
+            else if (bot.y > INTERNAL_RES) bot.y = -TANK_SIZE;
+
             if(alignedX || alignedY) {
                 bot.botReactionTimer++;
-                if(bot.botReactionTimer >= (bot.difficulty === 'hard' ? 4 : 12)) {
-                    fire(bot, false); bot.botReactionTimer = 0;
+                if(bot.botReactionTimer >= 90) { 
+                    fire(bot, false); 
+                    bot.botReactionTimer = 0;
                 }
             }
         }
@@ -1035,21 +992,27 @@
                 if(powerUps.length < 4) spawnPowerUp();
             }
 
+            // PERGERAKAN PLAYER (JALAN OTOMATIS & SCREEN WRAP)
             if(!isSpectator && tanks[mySlot]) {
                 let p = tanks[mySlot];
                 if(p && p.alive) {
-                    let nextX = p.x, nextY = p.y, moved = false;
-
-                    if(keys['ArrowUp'] || keys['w']) { nextY -= p.spd; p.angle = 270; moved = true; }
-                    else if(keys['ArrowDown'] || keys['s']) { nextY += p.spd; p.angle = 90; moved = true; }
-                    else if(keys['ArrowLeft'] || keys['a']) { nextX -= p.spd; p.angle = 180; moved = true; }
-                    else if(keys['ArrowRight'] || keys['d']) { nextX += p.spd; p.angle = 0; moved = true; }
-
                     if(isAutoFire) fire(p, true);
 
-                    if(moved && !checkWallCollision(nextX, nextY)) {
-                        p.x = nextX; p.y = nextY;
+                    // Jalan Otomatis: Tank bergerak terus maju sesuai sudut pandangnya
+                    let rad = p.angle * Math.PI / 180;
+                    let nextX = p.x + Math.cos(rad) * p.spd;
+                    let nextY = p.y + Math.sin(rad) * p.spd;
+
+                    if(!checkWallCollision(nextX, nextY)) {
+                        p.x = nextX;
+                        p.y = nextY;
                     }
+
+                    // Batas Layar Otomatis (Screen Wrap)
+                    if (p.x < -TANK_SIZE) p.x = INTERNAL_RES;
+                    else if (p.x > INTERNAL_RES) p.x = -TANK_SIZE;
+                    if (p.y < -TANK_SIZE) p.y = INTERNAL_RES;
+                    else if (p.y > INTERNAL_RES) p.y = -TANK_SIZE;
 
                     let now = Date.now();
                     if(!isBotMode && (now - lastNetworkSend > 33)) { 
