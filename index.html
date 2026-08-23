@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - HD CYBER UPDATE</title>
+    <title>TANK RUMBLE VIP - FIXED MULTIPLAYER</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -56,6 +56,7 @@
 
         .btn-ff { width: 100%; padding: 11px; border-radius: 10px; border: none; background: linear-gradient(135deg, #00ffcc, #0088cc); color: #000; font-weight: 900; font-size: 12px; cursor: pointer; box-shadow: 0 6px 25px rgba(0, 255, 204, 0.4); text-transform: uppercase; }
         .btn-sub { background: #161824; border: 2px solid #ffaa00; color: #ffaa00; }
+        .btn-bot { background: linear-gradient(135deg, #ffaa00, #ff6600); color: #000; }
         .btn-start { background: linear-gradient(135deg, #ff0055, #ff6600); color: #fff; }
         .btn-reset { background: linear-gradient(135deg, #cc0000, #ff0055); color: #fff; }
 
@@ -65,6 +66,7 @@
         .leaderboard-table th { background: #00ffcc; color: #000; }
         
         .stat-btn { background: #1a1c2e; border: 1px solid #00ffcc; color: #00ffcc; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px; }
+        #network-status { font-size: 11px; text-align: center; font-weight: bold; color: #ff0055; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -112,19 +114,29 @@
         <!-- MENU LOBBY UTAMA -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE VIP</div>
-            <div class="menu-sub">HD CYBER EDITION</div>
+            <div class="menu-sub">FIXED MULTIPLAYER & AI BOT</div>
 
             <div class="main-panel">
+                <div id="network-status">SIAP MAIN (OFFLINE / ONLINE)</div>
+
                 <!-- MODE SELECTOR -->
-                <div class="section-label">1. MODE MATCH:</div>
+                <div class="section-label">1. JUMLAH PEMAIN / BOT:</div>
                 <div class="grid-3">
-                    <div class="btn-mode active" id="mode-1v1" onclick="selectGameMode(2, 'mode-1v1')">⚔️ 1 v 1</div>
-                    <div class="btn-mode" id="mode-1v4" onclick="selectGameMode(4, 'mode-1v4')">🔥 4 Player</div>
-                    <div class="btn-mode" id="mode-1v8" onclick="selectGameMode(8, 'mode-1v8')">💣 8 Player</div>
+                    <div class="btn-mode active" id="mode-1v1" onclick="selectGameMode(2, 'mode-1v1')">⚔️ 2 Tank</div>
+                    <div class="btn-mode" id="mode-1v4" onclick="selectGameMode(4, 'mode-1v4')">🔥 4 Tank</div>
+                    <div class="btn-mode" id="mode-1v8" onclick="selectGameMode(8, 'mode-1v8')">💣 8 Tank</div>
                 </div>
 
+                <!-- TINGKAT KESULITAN BOT -->
+                <div class="section-label">2. KESULITAN BOT (JIKA VS BOT):</div>
+                <select id="bot-difficulty">
+                    <option value="easy">🟢 EASY (BOT SANTAI)</option>
+                    <option value="medium" selected>🟡 MEDIUM (BOT SEIMBANG)</option>
+                    <option value="hard">🔴 HARD (BOT AGRESIF)</option>
+                </select>
+
                 <!-- SENJATA SELECTOR -->
-                <div class="section-label">2. PILIH SENJATA UTAMA:</div>
+                <div class="section-label">3. PILIH SENJATA UTAMA:</div>
                 <select id="weapon-select">
                     <option value="cannon">💥 CANNON (PELURU STANDAR)</option>
                     <option value="shotgun">🔱 SHOTGUN (3 PELURU SEBAR)</option>
@@ -132,7 +144,7 @@
                 </select>
 
                 <!-- MAP SELECTOR -->
-                <div class="section-label">3. PILIH ARENA/MAP:</div>
+                <div class="section-label">4. PILIH ARENA/MAP:</div>
                 <select id="map-select">
                     <option value="0">🏛️ LABIRIN KLASIK</option>
                     <option value="1">🏟️ ARENA TERBUKA</option>
@@ -140,7 +152,7 @@
                 </select>
 
                 <!-- KUSTOMISASI SKIN & COLOR -->
-                <div class="section-label">4. WARNA TANK:</div>
+                <div class="section-label">5. WARNA TANK KAMU:</div>
                 <div class="grid-3" id="skin-selector">
                     <div class="skin-option selected" style="background:#00ffcc;" onclick="selectSkin('#00ffcc', this)">CYAN</div>
                     <div class="skin-option" style="background:#ff0055;" onclick="selectSkin('#ff0055', this)">RED</div>
@@ -151,28 +163,30 @@
                 </div>
 
                 <!-- STAT UPGRADE TANK -->
-                <div class="section-label">5. UPGRADE STATS (POIN: <span id="stat-points" style="color:#00ffcc;">3</span>):</div>
+                <div class="section-label">6. UPGRADE STATS (POIN: <span id="stat-points" style="color:#00ffcc;">3</span>):</div>
                 <div class="grid-3" style="font-size:10px; text-align:center;">
                     <div>SPEED: <span id="stat-spd">1</span> <button class="stat-btn" onclick="upStat('spd')">+</button></div>
                     <div>DAMAGE: <span id="stat-dmg">1</span> <button class="stat-btn" onclick="upStat('dmg')">+</button></div>
                     <div>RELOAD: <span id="stat-rld">1</span> <button class="stat-btn" onclick="upStat('rld')">+</button></div>
                 </div>
 
-                <div style="font-size: 10px; color: #aaa; text-align:center; margin-top:2px;">STATUS SERVER: <span id="peer-status" style="color:#00ffcc;">SIAP</span></div>
+                <!-- TOMBOL TANDING VS BOT -->
+                <button class="btn-ff btn-bot" onclick="startBotMatch()">🤖 MAIN LAWAN AI BOT (OFFLINE)</button>
+
+                <div style="margin: 4px 0; font-weight: bold; font-size:10px; text-align:center; color:#00ffcc;">--- MABAR MULTIPLAYER (ONLINE) ---</div>
 
                 <!-- ROOM HOST & JOIN -->
-                <button class="btn-ff" onclick="createRoom()">👑 BUAT ROOM (HOST)</button>
+                <button class="btn-ff" onclick="createRoom()">👑 BUAT ROOM (HOST MABAR)</button>
                 
                 <div id="host-info" style="display:none; flex-direction:column; gap:6px;">
                     <div class="room-code-display" id="room-code-tag">CODE: ----</div>
                     <div style="font-size:11px; color:#00ffcc; text-align:center;" id="connected-count">Pemain Terhubung: 1 / 2</div>
-                    <button class="btn-ff btn-start" onclick="startOnlineMatch()">🚀 MULAI MATCH</button>
+                    <button class="btn-ff btn-start" onclick="startOnlineMatch()">🚀 MULAI MULTIPLAYER</button>
                 </div>
 
-                <div style="margin: 2px 0; font-weight: bold; font-size:10px; text-align:center;">--- GABUNG ROOM TEMAN ---</div>
-                <div class="grid-2">
-                    <input type="text" id="join-room-input" placeholder="KODE ROOM" maxlength="4">
-                    <button class="btn-ff btn-sub" onclick="joinRoom()">🎮 GABUNG</button>
+                <div class="grid-2" style="margin-top:4px;">
+                    <input type="text" id="join-room-input" placeholder="4 ANGKA KODE" maxlength="4">
+                    <button class="btn-ff btn-sub" onclick="joinRoom()">🎮 GABUNG ROOM</button>
                 </div>
             </div>
         </div>
@@ -250,7 +264,6 @@
             }
         }
 
-        // KOMENTATOR VOICEOVER
         function speakIndo(text) {
             if(!voiceEnabled) return;
             if('speechSynthesis' in window) {
@@ -269,19 +282,24 @@
         cvs.width = INTERNAL_RES;
         cvs.height = INTERNAL_RES;
 
-        let peer = null, mySlot = 0, isHost = false;
+        let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let connections = [];
         let hostConn = null;
         let maxPlayersLimit = 2;
-        const PREFIX = "TRPURE-";
+        const PREFIX = "TRVIPFIX-";
 
         let currentRound = 1;
         const TOTAL_ROUNDS = 3;
 
-        // PLAYER STATS & SKINS
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
         let isAutoFire = false;
+
+        function setNetStatus(txt, color = '#00ffcc') {
+            let el = document.getElementById('network-status');
+            el.innerText = txt;
+            el.style.color = color;
+        }
 
         function toggleAutoFire() {
             isAutoFire = !isAutoFire;
@@ -322,55 +340,91 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        function initPeer() {
-            peer = new Peer();
-            peer.on('open', id => { document.getElementById('peer-status').innerText = "SIAP MABAR!"; });
-            peer.on('error', err => { document.getElementById('peer-status').innerText = "KONEKSI ERROR"; });
+        // PEERJS NETWORK STABLE CONFIG
+        function initPeerServer(customId = null) {
+            if(peer) peer.destroy();
+            let config = { host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 1 };
+            return customId ? new Peer(customId, config) : new Peer(config);
         }
-        initPeer();
 
         function createRoom() {
             let roomCode = Math.floor(1000 + Math.random() * 9000).toString();
             let fullId = PREFIX + roomCode;
-            if(peer) peer.destroy();
-            peer = new Peer(fullId);
+            
+            setNetStatus("MEMBUAT ROOM...", "#ffaa00");
+            peer = initPeerServer(fullId);
 
             peer.on('open', id => {
-                isHost = true; mySlot = 0;
+                isHost = true; isBotMode = false; mySlot = 0;
+                connections = [];
                 document.getElementById('host-info').style.display = 'flex';
                 document.getElementById('room-code-tag').innerText = "KODE ROOM: " + roomCode;
                 updateConnectedStatus();
-                speakIndo(`Room berhasil dibuat. Mode ${maxPlayersLimit} pemain.`);
+                setNetStatus("ROOM BERHASIL DIBUAT! MENUNGGU TEMAN...", "#00ffcc");
+                speakIndo(`Room multiplayer dibuat. Kode ${roomCode}.`);
             });
 
             peer.on('connection', conn => {
-                if(connections.length >= maxPlayersLimit - 1) return; 
                 connections.push(conn);
                 updateConnectedStatus();
-
                 let assignedSlot = connections.length;
+
                 conn.on('open', () => {
+                    setNetStatus(`TEMAN TERHUBUNG (P${assignedSlot+1})!`, "#00ff66");
                     conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit });
                 });
+
                 conn.on('data', data => handleData(data));
+                conn.on('close', () => {
+                    setNetStatus("TEMAN TERPUTUS!", "#ff0055");
+                });
+            });
+
+            peer.on('error', err => {
+                setNetStatus("GAGAL BUAT ROOM: KODE TERPAKAI, COBA LAGI", "#ff0055");
             });
         }
 
         function joinRoom() {
             let code = document.getElementById('join-room-input').value.trim().toUpperCase();
-            if(!code) return alert("Masukkan Kode Room!");
-            let fullId = PREFIX + code; isHost = false;
-            if(!peer) peer = new Peer();
-            hostConn = peer.connect(fullId);
-            hostConn.on('open', () => { 
-                speakIndo("Berhasil terhubung ke host!"); 
-                document.getElementById('peer-status').innerText = "TERHUBUNG!";
+            if(!code) return alert("Masukkan 4 Angka Kode Room!");
+            
+            let fullId = PREFIX + code; isHost = false; isBotMode = false;
+            setNetStatus("MENGHUBUNGKAN KE ROOM...", "#ffaa00");
+
+            peer = initPeerServer();
+            peer.on('open', id => {
+                hostConn = peer.connect(fullId, { reliable: true });
+                
+                hostConn.on('open', () => { 
+                    setNetStatus("TERHUBUNG KE HOST! MENUNGGU GAME MULAI...", "#00ff66");
+                    speakIndo("Berhasil terhubung ke room!"); 
+                });
+
+                hostConn.on('data', data => handleData(data));
+                
+                hostConn.on('close', () => {
+                    setNetStatus("KONEKSI KE HOST TERPUTUS!", "#ff0055");
+                });
             });
-            hostConn.on('data', data => handleData(data));
+
+            peer.on('error', err => {
+                setNetStatus("KODE ROOM TIDAK DITEMUKAN / SALAH!", "#ff0055");
+            });
+        }
+
+        function startBotMatch() {
+            isBotMode = true;
+            isHost = true;
+            mySlot = 0;
+            let mapType = document.getElementById('map-select').value;
+            let weaponType = document.getElementById('weapon-select').value;
+            initFullMatch(mapType, weaponType);
         }
 
         function startOnlineMatch() {
             if(!isHost) return;
+            isBotMode = false;
             currentRound = 1;
             let mapType = document.getElementById('map-select').value;
             let weaponType = document.getElementById('weapon-select').value;
@@ -379,8 +433,12 @@
         }
 
         function broadcast(data) {
-            if(isHost) connections.forEach(c => c.send(data));
-            else if(hostConn) hostConn.send(data);
+            if(isBotMode) return;
+            if(isHost) {
+                connections.forEach(c => { if(c.open) c.send(data); });
+            } else if(hostConn && hostConn.open) {
+                hostConn.send(data);
+            }
         }
 
         function handleData(data) {
@@ -429,22 +487,30 @@
 
         function initFullMatch(mapType = 0, weaponType = 'cannon') {
             currentRound = 1;
-            let totalPlayers = isHost ? (connections.length + 1) : maxPlayersLimit;
+            let totalPlayers = isBotMode ? maxPlayersLimit : (isHost ? (connections.length + 1) : maxPlayersLimit);
+
+            let diff = document.getElementById('bot-difficulty').value;
+            let botSpdMulti = diff === 'easy' ? 0.7 : (diff === 'hard' ? 1.3 : 1.0);
 
             tanks = [];
             for(let i=0; i<totalPlayers; i++) {
+                let isBot = isBotMode && (i !== mySlot);
                 tanks.push({
                     id: i+1,
+                    isBot: isBot,
+                    name: isBot ? `BOT ${i+1}` : `P${i+1}`,
                     x: 0, y: 0,
                     angle: 90,
                     color: i === mySlot ? selectedColor : defaultColors[i],
                     hp: 200, maxHp: 200,
                     kills: 0, score: 0, alive: true,
-                    spd: 2 + (i===mySlot ? stats.spd*0.5 : 0.5),
+                    spd: (2 + (i===mySlot ? stats.spd*0.5 : 0.5)) * (isBot ? botSpdMulti : 1),
                     dmg: 35 + (i===mySlot ? stats.dmg*10 : 0),
                     reload: 350 - (i===mySlot ? stats.rld*40 : 0),
                     weapon: weaponType,
-                    muzzleFlash: 0
+                    muzzleFlash: 0,
+                    botMoveTimer: 0,
+                    botTargetAngle: 0
                 });
             }
             startNextRound(mapType);
@@ -473,9 +539,9 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'none';
-            document.getElementById('player-id-tag').innerText = `P${mySlot+1} (KAMU)`;
+            document.getElementById('player-id-tag').innerText = `${tanks[mySlot].name} (KAMU)`;
 
-            speakIndo(`Ronde ${currentRound} dimulai! Bertarunglah!`);
+            speakIndo(`Ronde ${currentRound} dimulai! ${isBotMode ? 'Lawan AI Bot!' : ''}`);
             requestAnimationFrame(loop);
         }
 
@@ -548,7 +614,7 @@
                 });
             }
 
-            if(isLocal) broadcast({ type: 'FIRE', slot: mySlot });
+            if(isLocal && !isBotMode) broadcast({ type: 'FIRE', slot: mySlot });
         }
 
         function addBoom(x, y, color, isBig = false) {
@@ -563,15 +629,57 @@
             }
         }
 
+        function updateBotLogic(bot) {
+            if(!bot.alive || !bot.isBot || isGameOver) return;
+
+            let targets = tanks.filter(t => t.alive && t.id !== bot.id);
+            if(targets.length === 0) return;
+
+            let target = targets[0];
+            let dx = (target.x + S/2) - (bot.x + S/2);
+            let dy = (target.y + S/2) - (bot.y + S/2);
+            let dist = Math.hypot(dx, dy);
+
+            let desiredAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                bot.botTargetAngle = dx > 0 ? 0 : 180;
+            } else {
+                bot.botTargetAngle = dy > 0 ? 90 : 270;
+            }
+
+            let nextX = bot.x, nextY = bot.y;
+            if(bot.botTargetAngle === 0) nextX += bot.spd;
+            else if(bot.botTargetAngle === 180) nextX -= bot.spd;
+            else if(bot.botTargetAngle === 90) nextY += bot.spd;
+            else if(bot.botTargetAngle === 270) nextY -= bot.spd;
+
+            let gx = Math.floor((nextX + S/2) / S);
+            let gy = Math.floor((nextY + S/2) / S);
+
+            if(gy >= 0 && gy < G && gx >= 0 && gx < G && map[gy][gx] === 0) {
+                bot.x = nextX;
+                bot.y = nextY;
+                bot.angle = bot.botTargetAngle;
+            } else {
+                bot.botTargetAngle = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
+            }
+
+            if(dist < 500 && (Math.abs(dx) < 60 || Math.abs(dy) < 60)) {
+                bot.angle = Math.round(desiredAngle / 90) * 90;
+                fire(bot, false);
+            }
+        }
+
         function handleRoundEnd(roundWinner) {
             isGameOver = true;
             if(roundWinner) roundWinner.score += 200;
 
             if(currentRound < TOTAL_ROUNDS) {
-                speakIndo(`Ronde ${currentRound} selesai! Pemenang: Pemain ${roundWinner ? roundWinner.id : 'Nihil'}`);
+                speakIndo(`Ronde ${currentRound} selesai! Pemenang: ${roundWinner ? roundWinner.name : 'Nihil'}`);
                 setTimeout(() => {
                     currentRound++;
-                    if(isHost) broadcast({ type: 'NEXT_ROUND', round: currentRound });
+                    if(isHost && !isBotMode) broadcast({ type: 'NEXT_ROUND', round: currentRound });
                     startNextRound();
                 }, 3500);
             } else {
@@ -594,12 +702,15 @@
 
                 if(keys[' '] || isAutoFire) fire(p, true);
 
-                if(moved) {
+                if(moved && !isBotMode) {
                     broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
                 }
             }
 
-            // BULLET PHYSICS
+            tanks.forEach(t => {
+                if(t.isBot) updateBotLogic(t);
+            });
+
             for(let i=bullets.length-1; i>=0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
@@ -628,7 +739,7 @@
                                 addBoom(t.x+S/2, t.y+S/2, '#ff0055', true);
                                 let killer = tanks.find(k => k.id === b.id);
                                 if(killer) { killer.kills++; killer.score += 100; }
-                                speakIndo(`Pemain ${t.id} hancur oleh Pemain ${killer ? killer.id : ''}`);
+                                speakIndo(`${t.name} hancur oleh ${killer ? killer.name : 'peluru'}`);
 
                                 let aliveTanks = tanks.filter(x => x.alive);
                                 if(aliveTanks.length <= 1) handleRoundEnd(aliveTanks[0]);
@@ -652,8 +763,8 @@
             let champ = sortedTanks[0];
 
             document.getElementById('win-title').innerText = "GRAND CHAMPION!";
-            document.getElementById('win-sub').innerText = `JUARA MATCH: PEMAIN ${champ.id}`;
-            speakIndo(`Selamat kepada Pemain ${champ.id} sebagai Juara Umum!`);
+            document.getElementById('win-sub').innerText = `JUARA MATCH: ${champ.name}`;
+            speakIndo(`Selamat kepada ${champ.name} sebagai Juara Umum!`);
 
             let tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = '';
@@ -662,7 +773,7 @@
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>#${index+1} ${index===0 ? '🏆' : ''}</td>
-                    <td style="color:${t.color}; font-weight:bold;">Pemain ${t.id}</td>
+                    <td style="color:${t.color}; font-weight:bold;">${t.name}</td>
                     <td>${t.kills}</td>
                     <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
                 `;
@@ -670,11 +781,9 @@
             });
         }
 
-        // DESIGN RENDERING VISUAL HD
         function draw() {
             ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
-            // ARENA MAP DESIGN
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     let x = c*S, y = r*S;
@@ -693,7 +802,6 @@
                 }
             }
 
-            // TANKS HD CYBER DESIGN
             tanks.forEach(t => {
                 if(!t.alive) return;
                 ctx.save();
@@ -702,25 +810,21 @@
 
                 let mainColor = t.color;
 
-                // --- RODA RANTAI (TRACKS) ---
                 ctx.fillStyle = '#111319';
                 ctx.strokeStyle = '#333b4d';
                 ctx.lineWidth = 2;
                 
-                // Track Kiri & Kanan
                 ctx.fillRect(-S/2 + 6, -S/2 + 2, S - 12, 12);
                 ctx.strokeRect(-S/2 + 6, -S/2 + 2, S - 12, 12);
                 ctx.fillRect(-S/2 + 6, S/2 - 14, S - 12, 12);
                 ctx.strokeRect(-S/2 + 6, S/2 - 14, S - 12, 12);
 
-                // Gerigi Rantai (Track Pattern)
                 ctx.fillStyle = '#222938';
                 for(let step = -S/2 + 10; step < S/2 - 10; step += 8) {
                     ctx.fillRect(step, -S/2 + 3, 3, 10);
                     ctx.fillRect(step, S/2 - 13, 3, 10);
                 }
 
-                // --- BODI UTAMA (CHASSIS ARMOR) ---
                 ctx.fillStyle = '#161923';
                 ctx.beginPath();
                 ctx.moveTo(-S/2 + 12, -S/2 + 12);
@@ -734,29 +838,24 @@
                 ctx.lineWidth = 2.5;
                 ctx.stroke();
 
-                // Pelat Armor Tengah (Highlight)
                 ctx.fillStyle = mainColor;
                 ctx.globalAlpha = 0.25;
                 ctx.fillRect(-S/2 + 16, -S/2 + 18, 14, S - 36);
                 ctx.globalAlpha = 1.0;
 
-                // --- LARAS MERIAM GANDA (DUAL HEAVY BARRELS) ---
                 ctx.fillStyle = '#2a3040';
                 ctx.strokeStyle = mainColor;
                 ctx.lineWidth = 1.5;
                 
-                // Barrel 1 & 2
                 ctx.fillRect(2, -7, S/2 + 8, 5);
                 ctx.strokeRect(2, -7, S/2 + 8, 5);
                 ctx.fillRect(2, 2, S/2 + 8, 5);
                 ctx.strokeRect(2, 2, S/2 + 8, 5);
 
-                // Muzzle Brakes (Rem Moncong)
                 ctx.fillStyle = mainColor;
                 ctx.fillRect(S/2 + 6, -8, 4, 7);
                 ctx.fillRect(S/2 + 6, 1, 4, 7);
 
-                // --- KUBAH UTAMA (TURRET DOME) ---
                 ctx.fillStyle = '#0d1017';
                 ctx.beginPath();
                 ctx.arc(-2, 0, 16, 0, Math.PI * 2);
@@ -765,20 +864,17 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Inti Energi Neon di Turret
                 ctx.fillStyle = mainColor;
                 ctx.beginPath();
                 ctx.arc(-2, 0, 7, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Lamps / Headlights FRONT
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(S/2 - 8, -S/2 + 17, 2.5, 0, Math.PI * 2);
                 ctx.arc(S/2 - 8, S/2 - 17, 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // --- MUZZLE FLASH EFFECT ---
                 if(t.muzzleFlash > 0) {
                     ctx.fillStyle = '#ffaa00';
                     ctx.beginPath();
@@ -794,17 +890,15 @@
 
                 ctx.restore();
 
-                // TAG NAMA & HP BAR MINI
                 ctx.fillStyle = mainColor; 
                 ctx.font = '900 12px "Segoe UI", sans-serif'; 
                 ctx.textAlign = 'center';
                 ctx.shadowColor = mainColor;
                 ctx.shadowBlur = 6;
-                ctx.fillText(`P${t.id}`, t.x + S/2, t.y - 14);
+                ctx.fillText(t.name, t.x + S/2, t.y - 14);
                 ctx.shadowBlur = 0;
             });
 
-            // BULLETS DESIGN (GLOWING PROJECTILES)
             bullets.forEach(b => {
                 ctx.shadowColor = b.c;
                 ctx.shadowBlur = 10;
@@ -815,7 +909,6 @@
                 ctx.shadowBlur = 0;
             });
 
-            // PARTICLES
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.life -= 0.04;
