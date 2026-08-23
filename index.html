@@ -47,6 +47,7 @@
         }
         .btn-hud-exit { background: rgba(204, 0, 0, 0.4); color: #ff3366; border-color: rgba(255, 51, 102, 0.5); }
         .btn-hud-fullscreen { background: rgba(0, 255, 204, 0.4); color: #00ffcc; border-color: rgba(0, 255, 204, 0.5); }
+        .btn-hud-speed { background: rgba(255, 0, 204, 0.3); color: #ff00cc; border-color: rgba(255, 0, 204, 0.6); }
 
         .hud-center {
             background: rgba(10, 12, 20, 0.6); border: 1px solid rgba(0, 255, 204, 0.3);
@@ -140,6 +141,7 @@
                 <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">EXIT</button>
                 <button class="btn-hud-action" onclick="resetOnlineRoom()">RESTART</button>
                 <button class="btn-hud-action" onclick="openSettings()">SETTING</button>
+                <button class="btn-hud-action btn-hud-speed" id="btn-speed" onclick="toggleGameSpeed()">SPEED 1x</button>
                 <button class="btn-hud-action btn-hud-fullscreen" id="btn-fullscreen" onclick="toggleFullScreen()">FULLSCREEN</button>
             </div>
 
@@ -286,6 +288,22 @@
     </div>
 
     <script>
+        // --- SPEED MULTIPLIER HANDLER ---
+        let gameSpeed = 1;
+
+        function toggleGameSpeed() {
+            if (gameSpeed === 1) gameSpeed = 2;
+            else if (gameSpeed === 2) gameSpeed = 3;
+            else gameSpeed = 1;
+
+            document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`;
+            speakIndo(`Kecepatan ${gameSpeed} kali`);
+
+            if (!isBotMode) {
+                broadcast({ type: 'CHANGE_SPEED', speed: gameSpeed });
+            }
+        }
+
         // --- FULLSCREEN HANDLER ---
         function toggleFullScreen() {
             let elem = document.documentElement;
@@ -470,7 +488,7 @@
 
                 conn.on('open', () => {
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
-                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
+                    conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit, speed: gameSpeed }); 
                     
                     broadcast({ type: 'UPDATE_PLAYERS', total: connections.length + 1 });
                     powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
@@ -525,7 +543,7 @@
             let mapType = document.getElementById('map-select').value;
             let weaponType = document.getElementById('weapon-select').value;
             
-            broadcast({ type: 'START_MATCH', round: 1, maxPlayers: maxPlayersLimit, mapType: mapType, weaponType: weaponType });
+            broadcast({ type: 'START_MATCH', round: 1, maxPlayers: maxPlayersLimit, mapType: mapType, weaponType: weaponType, speed: gameSpeed });
             initFullMatch(mapType, weaponType);
         }
 
@@ -542,10 +560,15 @@
         function handleData(data, senderSlot) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
+                if (data.speed) { gameSpeed = data.speed; document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`; }
                 document.getElementById('player-id-tag').innerText = isSpectator ? "👨‍⚖️ JURI" : `P${mySlot+1} (KAMU)`;
             } else if(data.type === 'START_MATCH') {
                 currentRound = data.round || 1; maxPlayersLimit = data.maxPlayers;
+                if (data.speed) { gameSpeed = data.speed; document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`; }
                 initFullMatch(data.mapType || 0, data.weaponType || 'cannon');
+            } else if(data.type === 'CHANGE_SPEED') {
+                gameSpeed = data.speed;
+                document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`;
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round;
                 startNextRound();
@@ -690,7 +713,6 @@
         function startNextRound(mapType = 0) {
             generateMap(mapType);
             
-            // 8 SPAWN POINT SEBARAN ARENA BEBAS BERDESAKAN
             let spawnCoords = [
                 {x:2, y:2, angle:90},   {x:21, y:21, angle:270}, {x:21, y:2, angle:180},  {x:2, y:21, angle:0},
                 {x:11, y:2, angle:90},  {x:11, y:21, angle:270}, {x:2, y:11, angle:0},    {x:21, y:11, angle:180}
@@ -808,7 +830,7 @@
         function fire(t, isLocal = true) {
             if(!t.alive || isGameOver) return;
             let now = Date.now();
-            let currentReload = t.activePowerUp === 'laser' ? 120 : t.reload;
+            let currentReload = (t.activePowerUp === 'laser' ? 120 : t.reload) / gameSpeed;
             if(t.lastF && now - t.lastF < currentReload) return;
             t.lastF = now; t.muzzleFlash = 8;
 
@@ -819,19 +841,20 @@
             playSound('shoot');
 
             let activeWeapon = t.activePowerUp || t.baseWeapon;
+            let bulletSpdMulti = gameSpeed;
 
             if(activeWeapon === 'laser') {
-                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 24, vy: Math.sin(rad) * 24, id: t.id, c: '#00ffff', dmg: t.dmg * 1.3, rad: 3.5, isLaser: true });
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 24 * bulletSpdMulti, vy: Math.sin(rad) * 24 * bulletSpdMulti, id: t.id, c: '#00ffff', dmg: t.dmg * 1.3, rad: 3.5, isLaser: true });
             } else if(activeWeapon === 'nuke') {
-                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 9, vy: Math.sin(rad) * 9, id: t.id, c: '#ff0055', dmg: t.dmg * 2.5, rad: 10, isRocket: true, isNuke: true });
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 9 * bulletSpdMulti, vy: Math.sin(rad) * 9 * bulletSpdMulti, id: t.id, c: '#ff0055', dmg: t.dmg * 2.5, rad: 10, isRocket: true, isNuke: true });
             } else if(activeWeapon === 'shotgun') {
                 [-0.2, 0, 0.2].forEach(spread => {
-                    bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad + spread) * 13, vy: Math.sin(rad + spread) * 13, id: t.id, c: t.color, dmg: t.dmg * 0.6, rad: 4, isRocket: false });
+                    bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad + spread) * 13 * bulletSpdMulti, vy: Math.sin(rad + spread) * 13 * bulletSpdMulti, id: t.id, c: t.color, dmg: t.dmg * 0.6, rad: 4, isRocket: false });
                 });
             } else if(activeWeapon === 'rocket') {
-                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 11, vy: Math.sin(rad) * 11, id: t.id, c: '#ffaa00', dmg: t.dmg * 1.5, rad: 7, isRocket: true });
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 11 * bulletSpdMulti, vy: Math.sin(rad) * 11 * bulletSpdMulti, id: t.id, c: '#ffaa00', dmg: t.dmg * 1.5, rad: 7, isRocket: true });
             } else {
-                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 15, vy: Math.sin(rad) * 15, id: t.id, c: t.color, dmg: t.dmg, rad: 5, isRocket: false });
+                bullets.push({ x: spawnX, y: spawnY, vx: Math.cos(rad) * 15 * bulletSpdMulti, vy: Math.sin(rad) * 15 * bulletSpdMulti, id: t.id, c: t.color, dmg: t.dmg, rad: 5, isRocket: false });
             }
 
             if(isLocal && !isBotMode && !isSpectator) broadcast({ type: 'FIRE', slot: mySlot });
@@ -843,7 +866,7 @@
             for(let i=0; i<count; i++) {
                 particles.push({
                     x: x, y: y, 
-                    vx: (Math.random()-0.5)*(isBig?12:6), vy: (Math.random()-0.5)*(isBig?12:6),
+                    vx: (Math.random()-0.5)*(isBig?12:6)*gameSpeed, vy: (Math.random()-0.5)*(isBig?12:6)*gameSpeed,
                     size: Math.random()*(isBig?10:5)+2, c: color, life: 1
                 });
             }
@@ -855,7 +878,7 @@
 
             for(let i = 0; i < 35; i++) {
                 let pAngle = Math.random() * Math.PI * 2;
-                let spd = Math.random() * 15 + 2;
+                let spd = (Math.random() * 15 + 2) * gameSpeed;
                 particles.push({
                     x: cx, y: cy,
                     vx: Math.cos(pAngle) * spd,
@@ -868,7 +891,7 @@
 
             for(let i = 0; i < 10; i++) {
                 let dAngle = Math.random() * Math.PI * 2;
-                let dSpd = Math.random() * 10 + 3;
+                let dSpd = (Math.random() * 10 + 3) * gameSpeed;
                 particles.push({
                     x: cx, y: cy,
                     vx: Math.cos(dAngle) * dSpd,
@@ -923,7 +946,7 @@
 
             bot.botChangeDirTimer--;
             if(bot.botChangeDirTimer <= 0) {
-                bot.botChangeDirTimer = 60; 
+                bot.botChangeDirTimer = 60 / gameSpeed; 
                 if(alignedX || alignedY) {
                     bot.botDir = alignedX ? (dy > 0 ? 90 : 270) : (dx > 0 ? 0 : 180);
                 } else {
@@ -932,8 +955,9 @@
             }
 
             let radDir = bot.botDir * Math.PI / 180;
-            let nextX = bot.x + Math.cos(radDir) * (bot.spd * 0.85); 
-            let nextY = bot.y + Math.sin(radDir) * (bot.spd * 0.85);
+            let currentSpd = bot.spd * gameSpeed;
+            let nextX = bot.x + Math.cos(radDir) * (currentSpd * 0.85); 
+            let nextY = bot.y + Math.sin(radDir) * (currentSpd * 0.85);
 
             if(!checkWallCollision(nextX, nextY)) {
                 bot.x = nextX; bot.y = nextY; bot.angle = bot.botDir;
@@ -949,7 +973,7 @@
 
             if(alignedX || alignedY) {
                 bot.botReactionTimer++;
-                if(bot.botReactionTimer >= 30) { 
+                if(bot.botReactionTimer >= (30 / gameSpeed)) { 
                     fire(bot, false); 
                     bot.botReactionTimer = 0;
                 }
@@ -1018,8 +1042,9 @@
                     if(isAutoFire) fire(p, true);
 
                     let rad = p.angle * Math.PI / 180;
-                    let nextX = p.x + Math.cos(rad) * p.spd;
-                    let nextY = p.y + Math.sin(rad) * p.spd;
+                    let currentSpd = p.spd * gameSpeed;
+                    let nextX = p.x + Math.cos(rad) * currentSpd;
+                    let nextY = p.y + Math.sin(rad) * currentSpd;
 
                     if(!checkWallCollision(nextX, nextY)) {
                         p.x = nextX;
@@ -1238,7 +1263,7 @@
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 if(p.isShockwave) {
-                    p.size += 5;
+                    p.size += 5 * gameSpeed;
                     p.life -= 0.05;
                     ctx.save();
                     ctx.beginPath();
