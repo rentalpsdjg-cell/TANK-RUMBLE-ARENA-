@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - ULTRA JUMBO ARENA EDITION</title>
+    <title>TANK RUMBLE VIP - RED ZONE DANGER EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -61,6 +61,16 @@
         }
         .hp-bar-bg { width: clamp(60px, 15vw, 100px); height: 8px; background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
+
+        /* WARNING BANNER FOR ZONA MERAH */
+        #warning-banner {
+            position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 0, 85, 0.85); color: #fff; border: 2px solid #ffcc00;
+            padding: 8px 24px; border-radius: 30px; font-weight: 900; font-size: clamp(12px, 2.5vh, 18px);
+            z-index: 30; pointer-events: none; display: none; text-shadow: 0 0 10px #000;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.8); animation: pulse 0.5s infinite alternate;
+        }
+        @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.08); } }
 
         /* MINIMALIST TRANSPARENT AUTO FIRE BUTTON */
         .btn-auto-fire { 
@@ -135,6 +145,9 @@
 <body>
 
     <div id="game-container">
+        <!-- WARNING NOTIFICATION ZONA MERAH -->
+        <div id="warning-banner">⚠️ BAHAYA! BADAI PELURU 4 ARAH ⚠️</div>
+
         <!-- TOP HUD -->
         <div class="hud-layer">
             <div class="hud-btn-group">
@@ -176,7 +189,7 @@
         <!-- LOBBY MAIN MENU -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE VIP</div>
-            <div class="menu-sub">ULTRA JUMBO ARENA EDITION</div>
+            <div class="menu-sub">RED ZONE DANGER EDITION</div>
 
             <div class="main-panel">
                 <div id="network-status">SIAP MAIN (OFFLINE / ONLINE)</div>
@@ -262,7 +275,7 @@
                 </div>
                 
                 <div class="section-label" style="margin-top:8px;">KONTROL LAYAR:</div>
-                <div style="font-size:10px; color:#aaa; text-align:center; padding: 4px;">Usap/Drag jari di area layar mana saja untuk memutar tank[cite: 1].</div>
+                <div style="font-size:10px; color:#aaa; text-align:center; padding: 4px;">Usap/Drag jari di area layar mana saja untuk memutar tank.</div>
                 <button class="btn-ff btn-sub" style="margin-top:8px;" onclick="closeSettings()">❌ TUTUP</button>
             </div>
         </div>
@@ -371,6 +384,13 @@
                 let g = actx.createGain(); g.gain.setValueAtTime(1.0, now); 
                 g.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
                 noise.connect(filter); filter.connect(g); g.connect(actx.destination); noise.start();
+            } else if(type === 'alert') {
+                let osc = actx.createOscillator(), gain = actx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(300, now + 0.15);
+                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain); gain.connect(actx.destination);
+                osc.start(); osc.stop(now + 0.3);
             }
         }
 
@@ -395,14 +415,11 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // ==========================================
-        // DIMENSI MEGA JUMBO ARENA (DILEBARKAN DARI 24 BARIS MENJADI 45 GRID)
-        // ==========================================
+        // DIMENSI MEGA JUMBO ARENA (45 GRID)
         const S = 50; const G = 45; const TANK_SIZE = 36;
         const MAP_WIDTH = G * S; // 2250 px
         const MAP_HEIGHT = G * S; // 2250 px
 
-        // POSISI KAMERA DINAMIS
         let camera = { x: 0, y: 0 };
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
@@ -419,6 +436,10 @@
         let lastNetworkSend = 0;
         let syncTimer = 0;
         let animationFrameId = null;
+
+        // SISTEM ZONA MERAH (BADAI PELURU 4 ARAH)
+        let redZoneTimer = 0;
+        let redZoneNextInterval = Math.floor(Math.random() * 400) + 400; // Waktu acak pemicu zona merah
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
@@ -576,6 +597,8 @@
             } else if(data.type === 'CHANGE_SPEED') {
                 gameSpeed = data.speed;
                 document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`;
+            } else if(data.type === 'TRIGGER_REDZONE') {
+                triggerRedZoneLocal();
             } else if(data.type === 'NEXT_ROUND') {
                 currentRound = data.round;
                 startNextRound();
@@ -737,6 +760,7 @@
             });
 
             bullets = []; particles = []; powerUps = []; isGameOver = false; powerUpSpawnTimer = 0;
+            redZoneTimer = 0; redZoneNextInterval = Math.floor(Math.random() * 400) + 400;
 
             document.getElementById('round-indicator').innerText = `ROUND ${currentRound}/${TOTAL_ROUNDS}`;
             document.getElementById('menu-screen').style.display = 'none';
@@ -760,6 +784,42 @@
             
             if(animationFrameId) cancelAnimationFrame(animationFrameId);
             animationFrameId = requestAnimationFrame(loop);
+        }
+
+        // --- MANAJEMEN ZONA MERAH (SERANGAN PELURU 4 ARAH) ---
+        function triggerRedZoneLocal() {
+            playSound('alert');
+            speakIndo("Waspada badai peluru!");
+
+            let banner = document.getElementById('warning-banner');
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 2500);
+
+            // Eksekusi peluru berturut-turut dari 4 arah (Diperbaiki posisi spawn agar masuk arena)
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    if (isGameOver) return;
+                    let bulletSpd = 12 * gameSpeed;
+
+                    // 1. DARI ATAS KE BAWAH
+                    let xTop = Math.random() * (MAP_WIDTH - 200) + 100;
+                    bullets.push({ x: xTop, y: S + 10, vx: 0, vy: bulletSpd, id: -99, c: '#ff0055', dmg: 55, rad: 12, isRocket: true, isRedZone: true });
+
+                    // 2. DARI BAWAH KE ATAS
+                    let xBot = Math.random() * (MAP_WIDTH - 200) + 100;
+                    bullets.push({ x: xBot, y: MAP_HEIGHT - S - 10, vx: 0, vy: -bulletSpd, id: -99, c: '#ff0055', dmg: 55, rad: 12, isRocket: true, isRedZone: true });
+
+                    // 3. DARI KIRI KE KANAN
+                    let yLeft = Math.random() * (MAP_HEIGHT - 200) + 100;
+                    bullets.push({ x: S + 10, y: yLeft, vx: bulletSpd, vy: 0, id: -99, c: '#ff0055', dmg: 55, rad: 12, isRocket: true, isRedZone: true });
+
+                    // 4. DARI KANAN KE KIRI
+                    let yRight = Math.random() * (MAP_HEIGHT - 200) + 100;
+                    bullets.push({ x: MAP_WIDTH - S - 10, y: yRight, vx: -bulletSpd, vy: 0, id: -99, c: '#ff0055', dmg: 55, rad: 12, isRocket: true, isRedZone: true });
+
+                    playSound('shoot');
+                }, i * 180);
+            }
         }
 
         function nextTarget() {
@@ -1036,6 +1096,17 @@
         function update() {
             if(isGameOver) return;
 
+            // CEK EVENT DANGER RED ZONE (ACAK DARI HOST)
+            if(isHost) {
+                redZoneTimer++;
+                if(redZoneTimer >= redZoneNextInterval) {
+                    redZoneTimer = 0;
+                    redZoneNextInterval = Math.floor(Math.random() * 400) + 400;
+                    triggerRedZoneLocal();
+                    broadcast({ type: 'TRIGGER_REDZONE' });
+                }
+            }
+
             powerUpSpawnTimer++;
             if(powerUpSpawnTimer > 180) { 
                 powerUpSpawnTimer = 0;
@@ -1132,7 +1203,8 @@
                 let gx = Math.floor(b.x/S), gy = Math.floor(b.y/S);
                 if(gy>=0 && gy<G && gx>=0 && gx<G) {
                     if(map[gy][gx] === 1) { addBoom(b.x, b.y, '#ffaa00', b.isRocket); map[gy][gx]=0; bullets.splice(i,1); continue; }
-                    if(map[gy][gx] === 2) { addBoom(b.x, b.y, '#555', b.isRocket); bullets.splice(i,1); continue; }
+                    // Diperbaiki agar peluru zona merah tidak langsung musnah menabrak dinding arena luar
+                    if(map[gy][gx] === 2 && !b.isRedZone) { addBoom(b.x, b.y, '#555', b.isRocket); bullets.splice(i,1); continue; }
                 }
 
                 tanks.forEach(t => {
@@ -1180,7 +1252,6 @@
             ctx.clearRect(0, 0, cvs.width, cvs.height);
 
             ctx.save();
-            // GESER KANVAS SESUAI POSISI KAMERA
             ctx.translate(-camera.x, -camera.y);
 
             for(let r=0; r<G; r++) {
@@ -1270,7 +1341,7 @@
             });
 
             bullets.forEach(b => {
-                ctx.fillStyle = b.c; ctx.shadowColor = b.c; ctx.shadowBlur = 6;
+                ctx.fillStyle = b.c; ctx.shadowColor = b.c; ctx.shadowBlur = b.isRedZone ? 14 : 6;
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
             });
 
