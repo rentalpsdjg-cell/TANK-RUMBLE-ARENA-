@@ -53,6 +53,7 @@
         canvas { 
             background: #030408; border: 2px solid #00ffcc; box-shadow: 0 0 15px rgba(0, 255, 204, 0.25); 
             max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 10px; 
+            touch-action: none;
         }
 
         /* CONTROLS OVERLAY */
@@ -566,7 +567,6 @@
                     t.targetY = data.y; 
                     t.targetAngle = data.angle;
                     
-                    // KOREKSI LERP JIKA LAG SANGAT PARAH
                     if(Math.hypot(t.x - data.x, t.y - data.y) > S * 2) {
                         t.x = data.x;
                         t.y = data.y;
@@ -758,7 +758,7 @@
             }
         }
 
-        // --- DUAL FUNCTION CONTROLLER LOGIC ---
+        // --- DUAL FUNCTION & SWIPE CONTROLLER LOGIC ---
         let keys = {};
         const ctrlState = {
             ArrowUp: { isHolding: false, timer: null },
@@ -772,7 +772,6 @@
 
         function handleSingleTapAction(keyName) {
             if (!tanks[mySlot] || !tanks[mySlot].alive) return;
-            // Tap Cepat = Putar Arah Meriam Tanpa Berjalan
             if (keyName === 'ArrowUp') tanks[mySlot].angle = 270;
             if (keyName === 'ArrowDown') tanks[mySlot].angle = 90;
             if (keyName === 'ArrowLeft') tanks[mySlot].angle = 180;
@@ -787,7 +786,7 @@
             let el = document.getElementById(id);
             if(!el) return;
 
-            const HOLD_DELAY = 180; // Milidetik batas toleransi hold
+            const HOLD_DELAY = 180;
 
             const press = (e) => { 
                 if(e.cancelable) e.preventDefault(); 
@@ -795,7 +794,7 @@
 
                 ctrlState[keyName].timer = setTimeout(() => {
                     ctrlState[keyName].isHolding = true;
-                    keys[keyName] = true; // Aktifkan jalan terus jika ditahan >180ms
+                    keys[keyName] = true;
                 }, HOLD_DELAY);
             };
 
@@ -804,7 +803,6 @@
                 clearTimeout(ctrlState[keyName].timer);
 
                 if (!ctrlState[keyName].isHolding) {
-                    // Jika dilepas sebelum 180ms -> Hit sebagai Tap
                     handleSingleTapAction(keyName);
                 }
 
@@ -822,6 +820,50 @@
 
         bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
         bindTouch('btn-l', 'ArrowLeft'); bindTouch('btn-r', 'ArrowRight');
+
+        // --- GESTURE SWIPE / USAP LAYAR CANVAS ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const SWIPE_THRESHOLD = 25; 
+
+        cvs.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        cvs.addEventListener('touchend', (e) => {
+            if (!tanks[mySlot] || !tanks[mySlot].alive || isSpectator || e.changedTouches.length === 0) return;
+
+            let touchEndX = e.changedTouches[0].clientX;
+            let touchEndY = e.changedTouches[0].clientY;
+
+            let diffX = touchEndX - touchStartX;
+            let diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > SWIPE_THRESHOLD || Math.abs(diffY) > SWIPE_THRESHOLD) {
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // Usap Kanan / Kiri
+                    if (diffX > 0) tanks[mySlot].angle = 0;      // Kanan
+                    else tanks[mySlot].angle = 180;              // Kiri
+                } else {
+                    // Usap Bawah / Atas
+                    if (diffY > 0) tanks[mySlot].angle = 90;     // Bawah
+                    else tanks[mySlot].angle = 270;              // Atas
+                }
+
+                if (!isBotMode) {
+                    broadcast({
+                        type: 'SYNC_POS',
+                        slot: mySlot,
+                        x: tanks[mySlot].x,
+                        y: tanks[mySlot].y,
+                        angle: tanks[mySlot].angle
+                    });
+                }
+            }
+        }, { passive: true });
 
         function openSettings() { document.getElementById('settings-screen').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settings-screen').style.display = 'none'; }
@@ -937,7 +979,6 @@
             }
         }
 
-        // --- ROUND END (HOST AUTHORITY) ---
         function handleRoundEnd(roundWinner) {
             if(!isHost) return; 
 
@@ -994,7 +1035,6 @@
                 if(powerUps.length < 4) spawnPowerUp();
             }
 
-            // 1. KONTROL & LOGIKA TANK LOKAL (30 FPS TICKRATE NETWORK)
             if(!isSpectator && tanks[mySlot]) {
                 let p = tanks[mySlot];
                 if(p && p.alive) {
@@ -1011,7 +1051,6 @@
                         p.x = nextX; p.y = nextY;
                     }
 
-                    // SEND POSISI KONTINU TIAP ~33MS
                     let now = Date.now();
                     if(!isBotMode && (now - lastNetworkSend > 33)) { 
                         lastNetworkSend = now;
@@ -1020,7 +1059,6 @@
                 }
             }
 
-            // 2. INTERPOLASI GERAKAN HALUS (SMOOTH LERP 0.25)
             tanks.forEach(t => { 
                 if(t.isBot) {
                     updateBotLogic(t);
@@ -1060,7 +1098,6 @@
                 }
             });
 
-            // 3. LOGIKA BULLETS & DAMAGE
             for(let i=bullets.length-1; i>=0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
@@ -1095,7 +1132,6 @@
                 if(b.x<0 || b.y<0 || b.x>INTERNAL_RES || b.y>INTERNAL_RES) bullets.splice(i,1);
             }
 
-            // HOST STATE BROADCAST BERKALA (~160MS)
             if(isHost) {
                 syncTimer++;
                 if(syncTimer > 10) {
