@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FIT MOBILE CONTROLS</title>
+    <title>TANK RUMBLE VIP - FAST POWER-UP EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -40,6 +40,7 @@
             font-weight: 900; font-size: clamp(8px, 1.1vh, 10px); cursor: pointer; 
         }
         .btn-hud-exit { background: rgba(204,0,0,0.2); color: #ff3366; border-color: #ff3366; }
+        .btn-hud-fullscreen { background: rgba(0, 255, 204, 0.15); color: #00ffcc; border-color: #00ffcc; }
 
         .hud-card { display: flex; flex-direction: column; align-items: flex-end; }
         .hp-bar-bg { width: clamp(50px, 14vw, 80px); height: clamp(5px, 0.8vh, 8px); background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
@@ -54,7 +55,7 @@
             max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 10px; 
         }
 
-        /* CONTROLS OVERLAY - PERFECT MOBILE FIT */
+        /* CONTROLS OVERLAY */
         .controls-overlay { 
             width: 100%; height: clamp(90px, 16vh, 120px); 
             display: flex; justify-content: space-between; align-items: center; padding: 0 8px 4px 8px; z-index: 20; flex-shrink: 0;
@@ -72,7 +73,6 @@
         
         .fire-container { display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
-        /* TOMBOL AUTO FIRE KHUSUS AUTO ONLY */
         .btn-auto-fire { 
             background: rgba(10, 12, 20, 0.95); border: 2px solid #ffaa00; color: #ffaa00; 
             padding: clamp(8px, 1.5vh, 12px) clamp(12px, 2.5vw, 18px); border-radius: 20px; 
@@ -129,12 +129,13 @@
 <body>
 
     <div id="game-container">
-        <!-- TOP HUD -->
+        <!-- TOP HUD WITH FULLSCREEN BUTTON -->
         <div class="hud-layer">
             <div class="hud-btn-group">
                 <button class="btn-hud-action btn-hud-exit" onclick="exitGame()">EXIT</button>
                 <button class="btn-hud-action" onclick="resetOnlineRoom()">RESTART</button>
                 <button class="btn-hud-action" onclick="openSettings()">SETTING</button>
+                <button class="btn-hud-action btn-hud-fullscreen" id="btn-fullscreen" onclick="toggleFullScreen()">FULLSCREEN</button>
             </div>
 
             <div style="text-align:center;">
@@ -154,7 +155,7 @@
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- TOUCH CONTROLS WITH AUTO FIRE ONLY -->
+        <!-- TOUCH CONTROLS -->
         <div class="controls-overlay" id="player-controls">
             <div class="dpad-container">
                 <div></div><div class="btn-ctrl" id="btn-u">▲</div><div></div>
@@ -278,6 +279,50 @@
     </div>
 
     <script>
+        // --- FULLSCREEN HANDLER ---
+        function toggleFullScreen() {
+            let elem = document.documentElement;
+            let btn = document.getElementById('btn-fullscreen');
+
+            if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+                btn.innerText = "EXIT FULL";
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                btn.innerText = "FULLSCREEN";
+            }
+        }
+
+        document.addEventListener('fullscreenchange', updateFsBtn);
+        document.addEventListener('webkitfullscreenchange', updateFsBtn);
+        document.addEventListener('mozfullscreenchange', updateFsBtn);
+        document.addEventListener('MSFullscreenChange', updateFsBtn);
+
+        function updateFsBtn() {
+            let btn = document.getElementById('btn-fullscreen');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+                btn.innerText = "EXIT FULL";
+            } else {
+                btn.innerText = "FULLSCREEN";
+            }
+        }
+
         // --- AUDIO ENGINE ---
         const actx = new (window.AudioContext || window.webkitAudioContext)();
         let soundEnabled = true, voiceEnabled = true;
@@ -339,8 +384,8 @@
         cvs.width = INTERNAL_RES;
         cvs.height = INTERNAL_RES;
 
-        const S = 75; // Grid 75px
-        const G = 16; // Grid 16x16
+        const S = 75; 
+        const G = 16; 
         const TANK_SIZE = 52;
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
@@ -354,7 +399,7 @@
 
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
-        let isAutoFire = true; // DEFAULT ON PERMINTAAN USER
+        let isAutoFire = true;
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
@@ -517,6 +562,12 @@
             } else if(data.type === 'RESET_ROOM') {
                 currentRound = 1; initFullMatch(0, 'cannon');
                 document.getElementById('win-screen').style.display = 'none';
+            } else if(data.type === 'SPAWN_POWERUP') {
+                // SINKRONISASI ITEM DARI HOST KE CLIENT
+                powerUps.push(data.item);
+            } else if(data.type === 'REMOVE_POWERUP') {
+                // SINKRONISASI PENGAMBILAN ITEM
+                powerUps = powerUps.filter(p => p.id !== data.id);
             }
         }
 
@@ -556,6 +607,7 @@
         const defaultColors = ['#00ffcc', '#ff0055', '#cc00ff', '#00ff66', '#ffaa00', '#ff00ff', '#ffff00', '#0099ff'];
         const POWER_TYPES = ['laser', 'nuke', 'shield'];
 
+        // --- SISTEM SPAWN POWER-UP CEPAT & TER-SINKRONISASI ---
         function spawnPowerUp() {
             if(!isHost) return;
             let freeSpots = [];
@@ -568,10 +620,14 @@
             let spot = freeSpots[Math.floor(Math.random() * freeSpots.length)];
             let pType = POWER_TYPES[Math.floor(Math.random() * POWER_TYPES.length)];
             
-            powerUps.push({
+            let newPowerUp = {
+                id: Date.now() + Math.random(),
                 x: spot.x + S/2, y: spot.y + S/2,
                 type: pType, size: 24, pulse: 0
-            });
+            };
+
+            powerUps.push(newPowerUp);
+            broadcast({ type: 'SPAWN_POWERUP', item: newPowerUp });
         }
 
         function initFullMatch(mapType = 0, weaponType = 'cannon') {
@@ -807,10 +863,11 @@
         function update() {
             if(isGameOver) return;
 
+            // DITINGKATKAN: WAKTU SPAWN LEBIH CEPAT (120 FRAME = ~2 DETIK) & BISA ADA 4 ITEM SEKALIGUS
             powerUpSpawnTimer++;
-            if(powerUpSpawnTimer > 300) { 
+            if(powerUpSpawnTimer > 120) { 
                 powerUpSpawnTimer = 0;
-                if(powerUps.length < 2) spawnPowerUp();
+                if(powerUps.length < 4) spawnPowerUp();
             }
 
             let p = tanks[mySlot];
@@ -822,7 +879,6 @@
                 else if(keys['ArrowLeft'] || keys['a']) { nextX -= p.spd; p.angle = 180; moved = true; }
                 else if(keys['ArrowRight'] || keys['d']) { nextX += p.spd; p.angle = 0; moved = true; }
 
-                // AUTO FIRE OTOMATIS JIKA AKTIF
                 if(isAutoFire) fire(p, true);
 
                 if(moved && !checkWallCollision(nextX, nextY)) {
@@ -851,7 +907,11 @@
                             t.powerUpTimer = 350; 
                         }
                         if(t.id === mySlot) speakIndo(pw.type === 'shield' ? "Perisai Aktif!" : "Senjata Super!");
+
+                        // BROADCAST PENGAMBILAN POWERUP KE SELURUH PEMAIN
+                        let takenId = pw.id;
                         powerUps.splice(i, 1);
+                        if(isHost) broadcast({ type: 'REMOVE_POWERUP', id: takenId });
                     }
                 }
             });
