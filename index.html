@@ -3,36 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FIX MULTIPLAYER START</title>
+    <title>TANK RUMBLE VIP - FIX HEALTH & WEAPONS</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Impact, sans-serif; -webkit-tap-highlight-color: transparent; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; }
         
         #game-container { 
-            position: relative; 
-            width: 100vw; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: #020205; 
-            padding: 4px;
+            position: relative; width: 100vw; height: 100vh; 
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center; 
+            background: #020205; padding: 6px; box-sizing: border-box;
         }
 
         .hud-layer { 
-            width: 100%; 
-            max-width: 500px;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            z-index: 10; 
-            background: rgba(10, 12, 20, 0.95);
-            border: 1px solid rgba(0, 255, 204, 0.4);
-            border-radius: 8px;
-            padding: 4px 8px;
-            gap: 4px;
+            width: 100%; max-width: 500px; display: flex; justify-content: space-between; align-items: center; 
+            z-index: 10; background: rgba(10, 12, 20, 0.95); border: 1.5px solid rgba(0, 255, 204, 0.5);
+            border-radius: 8px; padding: 4px 8px; gap: 4px; flex-shrink: 0;
         }
 
         .hud-btn-group { display: flex; gap: 4px; align-items: center; }
@@ -47,69 +33,34 @@
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
         .canvas-wrapper {
-            flex: 1;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 0;
-            margin: 4px 0;
+            flex: 1 1 auto; width: 100%; max-width: 500px; display: flex; justify-content: center; align-items: center; min-height: 0; margin: 4px 0;
         }
         canvas { 
-            background: #030408; 
-            border: 2px solid #00ffcc; 
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2); 
-            max-width: 100%; 
-            max-height: 100%; 
-            aspect-ratio: 1 / 1;
-            object-fit: contain; 
-            border-radius: 8px; 
+            background: #030408; border: 2px solid #00ffcc; box-shadow: 0 0 20px rgba(0, 255, 204, 0.25); 
+            max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 10px; 
         }
 
         .controls-overlay { 
-            width: 100%; 
-            max-width: 500px; 
-            height: 135px;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 0 8px; 
-            z-index: 20; 
-            pointer-events: auto;
+            width: 100%; max-width: 500px; height: 110px; display: flex; justify-content: space-between; align-items: center; padding: 0 8px; z-index: 20; flex-shrink: 0;
         }
         
-        .dpad-container { 
-            display: grid; 
-            grid-template-columns: repeat(3, 42px); 
-            grid-template-rows: repeat(3, 42px); 
-            gap: 3px; 
-        }
+        .dpad-container { display: grid; grid-template-columns: repeat(3, 36px); grid-template-rows: repeat(3, 36px); gap: 3px; }
         .btn-ctrl { 
-            background: rgba(18, 20, 32, 0.9); 
-            border: 1.5px solid #00ffcc; 
-            color: #fff; 
-            border-radius: 10px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 18px; 
-            font-weight: bold; 
-            touch-action: manipulation; 
+            background: rgba(18, 20, 32, 0.9); border: 1.5px solid #00ffcc; color: #fff; border-radius: 8px; 
+            display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: bold; touch-action: manipulation; 
         }
         .btn-ctrl:active { background: #00ffcc; color: #000; }
         
-        .fire-container { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .fire-container { display: flex; flex-direction: column; gap: 4px; align-items: center; }
         .btn-fire-ff { 
-            width: 70px; height: 70px; border-radius: 50%; 
-            background: radial-gradient(circle, #ff0055, #660011); 
-            border: 2px solid #00ffcc; color: #fff; font-size: 12px; font-weight: 900; 
-            display: flex; justify-content: center; align-items: center; 
-            box-shadow: 0 0 15px rgba(255,0,85,0.6); touch-action: manipulation; cursor: pointer; 
+            width: 62px; height: 62px; border-radius: 50%; background: radial-gradient(circle, #ff0055, #660011); 
+            border: 2px solid #00ffcc; color: #fff; font-size: 11px; font-weight: 900; 
+            display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(255,0,85,0.6); touch-action: manipulation; cursor: pointer; 
         }
         
         .btn-auto-fire { 
             background: rgba(10, 12, 20, 0.9); border: 1px solid #ffaa00; color: #ffaa00; 
-            padding: 4px 8px; border-radius: 12px; font-size: 9px; font-weight: 900; cursor: pointer; 
+            padding: 3px 6px; border-radius: 10px; font-size: 9px; font-weight: 900; cursor: pointer; 
         }
         .btn-auto-fire.active { background: #ffaa00; color: #000; }
 
@@ -123,8 +74,7 @@
         
         .main-panel { 
             background: rgba(12, 14, 25, 0.95); border: 1.5px solid #00ffcc; 
-            padding: 10px; border-radius: 12px; width: 100%; max-width: 420px; 
-            display: flex; flex-direction: column; gap: 6px; 
+            padding: 10px; border-radius: 12px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 6px; 
         }
         .room-box input, select { 
             width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #00ffcc; 
@@ -363,7 +313,7 @@
 
         const S = 75; // Grid 75px
         const G = 16; // Grid 16x16
-        const TANK_SIZE = 48;
+        const TANK_SIZE = 52;
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let connections = [];
@@ -416,15 +366,14 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        // --- MULTIPLAYER FIX SYSTEM ---
+        // --- MULTIPLAYER ENGINE ---
         function initPeerServer(customId = null) {
             if(peer) peer.destroy();
             let config = {
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' }
+                        { urls: 'stun:stun1.l.google.com:19302' }
                     ]
                 }
             };
@@ -455,8 +404,6 @@
 
                 conn.on('open', () => {
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
-                    
-                    // Send Slot Data Multiple Times to Ensure Reception
                     let sendInit = () => {
                         conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit });
                     };
@@ -670,8 +617,8 @@
             t.lastF = now; t.muzzleFlash = 8;
 
             let rad = t.angle * Math.PI / 180;
-            let spawnX = t.x + S/2 + Math.cos(rad) * (S/2 + 5);
-            let spawnY = t.y + S/2 + Math.sin(rad) * (S/2 + 5);
+            let spawnX = t.x + S/2 + Math.cos(rad) * (S/2 + 8);
+            let spawnY = t.y + S/2 + Math.sin(rad) * (S/2 + 8);
 
             playSound('shoot');
 
@@ -680,20 +627,20 @@
                     bullets.push({ 
                         x: spawnX, y: spawnY, 
                         vx: Math.cos(rad + spread) * 14, vy: Math.sin(rad + spread) * 14,
-                        id: t.id, c: t.color, dmg: t.dmg * 0.6, rad: 4, isRocket: false
+                        id: t.id, c: t.color, dmg: t.dmg * 0.6, rad: 5, isRocket: false
                     });
                 });
             } else if(t.weapon === 'rocket') {
                 bullets.push({ 
                     x: spawnX, y: spawnY, 
                     vx: Math.cos(rad) * 12, vy: Math.sin(rad) * 12,
-                    id: t.id, c: '#ffaa00', dmg: t.dmg * 1.5, rad: 8, isRocket: true
+                    id: t.id, c: '#ffaa00', dmg: t.dmg * 1.5, rad: 9, isRocket: true
                 });
             } else {
                 bullets.push({ 
                     x: spawnX, y: spawnY, 
                     vx: Math.cos(rad) * 16, vy: Math.sin(rad) * 16,
-                    id: t.id, c: t.color, dmg: t.dmg, rad: 5, isRocket: false
+                    id: t.id, c: t.color, dmg: t.dmg, rad: 6, isRocket: false
                 });
             }
 
@@ -867,51 +814,160 @@
             });
         }
 
+        // --- RENDER ARENA, TANK, SENJATA & BAR DARAH HD ---
         function draw() {
             ctx.clearRect(0,0,INTERNAL_RES,INTERNAL_RES);
 
+            // GRID & MAP DENGAN EFEK TRIBAL NEON
             for(let r=0; r<G; r++) {
                 for(let c=0; c<G; c++) {
                     let x = c*S, y = r*S;
-                    ctx.strokeStyle = 'rgba(0, 255, 204, 0.08)';
+                    ctx.strokeStyle = 'rgba(0, 255, 204, 0.05)';
                     ctx.strokeRect(x,y,S,S);
 
                     if(map[r][c] === 1) { 
-                        ctx.fillStyle = '#3a1200'; ctx.fillRect(x,y,S,S);
-                        ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 3; ctx.strokeRect(x+2,y+2,S-4,S-4);
+                        ctx.fillStyle = '#1c0f05'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 2; ctx.strokeRect(x+2,y+2,S-4,S-4);
+                        ctx.fillStyle = 'rgba(255,102,0,0.15)'; ctx.fillRect(x+4,y+4,S-8,S-8);
                     } else if(map[r][c] === 2) { 
-                        ctx.fillStyle = '#0a0d18'; ctx.fillRect(x,y,S,S);
-                        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2; ctx.strokeRect(x,y,S,S);
+                        ctx.fillStyle = '#060a14'; ctx.fillRect(x,y,S,S);
+                        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2.5; ctx.strokeRect(x,y,S,S);
+                        ctx.fillStyle = 'rgba(0,255,204,0.1)'; ctx.fillRect(x+6,y+6,S-12,S-12);
                     }
                 }
             }
 
+            // RENDER TANK MODERN 2D (HD DESIGN + SENJATA & HP OVERLAY)
             tanks.forEach(t => {
                 if(!t.alive) return;
+                let centerX = t.x + S/2;
+                let centerY = t.y + S/2;
+
                 ctx.save();
-                ctx.translate(t.x + S/2, t.y + S/2);
+                ctx.translate(centerX, centerY);
                 ctx.rotate(t.angle * Math.PI / 180);
 
-                ctx.fillStyle = '#111319';
-                ctx.strokeStyle = t.color; ctx.lineWidth = 3;
-                ctx.fillRect(-TANK_SIZE/2, -TANK_SIZE/2, TANK_SIZE, TANK_SIZE);
-                ctx.strokeRect(-TANK_SIZE/2, -TANK_SIZE/2, TANK_SIZE, TANK_SIZE);
+                let mainColor = t.color;
 
-                ctx.fillStyle = t.color;
-                ctx.fillRect(0, -5, TANK_SIZE/2 + 8, 10);
+                // 1. Rantai Tank Kiri & Kanan (Caterpillar Tracks)
+                ctx.fillStyle = '#11141c';
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1.5;
+                
+                ctx.fillRect(-26, -26, 52, 10);
+                ctx.strokeRect(-26, -26, 52, 10);
+                ctx.fillRect(-26, 16, 52, 10);
+                ctx.strokeRect(-26, 16, 52, 10);
+
+                // Detail Gigi Rantai
+                ctx.fillStyle = '#475569';
+                for(let k = -22; k <= 20; k += 8) {
+                    ctx.fillRect(k, -25, 4, 8);
+                    ctx.fillRect(k, 17, 4, 8);
+                }
+
+                // 2. Badan Tank Utama (Chassis Metallic Armor)
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(-20, -16, 40, 32);
+                
+                ctx.strokeStyle = mainColor;
+                ctx.lineWidth = 2.5;
+                ctx.strokeRect(-20, -16, 40, 32);
+
+                // Inner Glow Chassis
+                ctx.fillStyle = mainColor;
+                ctx.globalAlpha = 0.25;
+                ctx.fillRect(-16, -12, 32, 24);
+                ctx.globalAlpha = 1.0;
+
+                // 3. TAMPILAN SENJATA (LARAS MERIAM BESAR & HIGHTECH)
+                ctx.fillStyle = '#1e293b';
+                ctx.strokeStyle = mainColor;
+                ctx.lineWidth = 2;
+
+                if(t.weapon === 'shotgun') {
+                    // Tiga Laras Meriam Sebar
+                    ctx.fillRect(4, -10, 24, 4);
+                    ctx.fillRect(6, -3, 28, 6);
+                    ctx.fillRect(4, 6, 24, 4);
+                    ctx.strokeRect(6, -3, 28, 6);
+                } else if(t.weapon === 'rocket') {
+                    // Peluncur Rudal Area
+                    ctx.fillRect(4, -10, 28, 20);
+                    ctx.strokeRect(4, -10, 28, 20);
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(28, -8, 6, 16);
+                } else {
+                    // Meriam Klasik High-Caliber
+                    ctx.fillRect(4, -5, 32, 10);
+                    ctx.strokeRect(4, -5, 32, 10);
+                    ctx.fillStyle = mainColor;
+                    ctx.fillRect(32, -7, 6, 14);
+                }
+
+                // 4. Kubah Turet Bulat Center (Turret Dome)
+                ctx.beginPath();
+                ctx.arc(0, 0, 13, 0, Math.PI * 2);
+                ctx.fillStyle = '#090d16';
+                ctx.fill();
+                ctx.strokeStyle = mainColor;
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Core LED pusat
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fillStyle = mainColor;
+                ctx.fill();
+
+                // Efek Kilatan Tembakan (Muzzle Flash)
+                if(t.muzzleFlash > 0) {
+                    t.muzzleFlash--;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(40, 0, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 ctx.restore();
 
+                // --- 5. RENDER DARAH (HEALTH BAR) & NAMA PEMAIN DI ATAS TANK ---
+                // Nama
                 ctx.fillStyle = t.color; 
                 ctx.font = '900 14px sans-serif'; 
                 ctx.textAlign = 'center';
-                ctx.fillText(t.name, t.x + S/2, t.y - 12);
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 4;
+                ctx.fillText(t.name, centerX, centerY - 38);
+
+                // Background Bar Darah
+                let barW = 54, barH = 7;
+                let barX = centerX - barW / 2;
+                let barY = centerY - 32;
+
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+                // Fill Bar Darah Dinamis
+                let hpRatio = Math.max(0, t.hp / t.maxHp);
+                ctx.fillStyle = hpRatio > 0.5 ? '#00ff66' : (hpRatio > 0.25 ? '#ffaa00' : '#ff0055');
+                ctx.fillRect(barX, barY, barW * hpRatio, barH);
+                ctx.shadowBlur = 0;
             });
 
+            // BULLETS WITH GLOW
             bullets.forEach(b => {
                 ctx.fillStyle = b.c;
+                ctx.shadowColor = b.c;
+                ctx.shadowBlur = 8;
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
             });
 
+            // PARTICLES
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.life -= 0.04;
