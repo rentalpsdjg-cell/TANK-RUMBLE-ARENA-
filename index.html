@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FULLSCREEN EDITION</title>
+    <title>TANK RUMBLE VIP - CYBER EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -65,7 +65,7 @@
         .hp-bar-bg { width: clamp(70px, 16vw, 120px); height: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 3px; }
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
-        /* MINIMALIST TRANSPARENT AUTO FIRE BUTTON */
+        /* TRANSPARENT KONTROL TOMBOL AUTO FIRE */
         .btn-auto-fire { 
             position: absolute; bottom: clamp(16px, 4vh, 28px); right: clamp(16px, 4vw, 28px);
             z-index: 20; background: rgba(255, 170, 0, 0.2); border: 1.5px solid rgba(255, 170, 0, 0.5); color: #ffaa00; 
@@ -179,7 +179,7 @@
         <!-- LOBBY MAIN MENU -->
         <div id="menu-screen" class="modal-screen">
             <div class="menu-title">TANK RUMBLE VIP</div>
-            <div class="menu-sub">FULLSCREEN ULTRA - MODE SWIPE CONTROL</div>
+            <div class="menu-sub">CYBER EDITION - AUTO MOVE & HEAVY ARMOR</div>
 
             <div class="main-panel">
                 <div id="network-status">SIAP MAIN (OFFLINE / ONLINE)</div>
@@ -200,14 +200,14 @@
                 <div class="section-label">2. KESULITAN BOT:</div>
                 <select id="bot-difficulty">
                     <option value="easy">🟢 EASY (SANTAI & NORMAL)</option>
-                    <option value="medium" selected>🟡 MEDIUM (TAKTIKAL ~21 DETIK)</option>
+                    <option value="medium" selected>🟡 MEDIUM (TAKTIKAL)</option>
                     <option value="hard">🔴 HARD (PRO PLAYER BOT)</option>
                 </select>
 
                 <div class="section-label">3. SENJATA UTAMA:</div>
                 <select id="weapon-select">
                     <option value="cannon">💥 CANNON (PELURU STANDAR)</option>
-                    <option value="shotgun">ff SHOTGUN (3 PELURU SEBAR)</option>
+                    <option value="shotgun">🔥 SHOTGUN (3 PELURU SEBAR)</option>
                     <option value="rocket">🚀 ROCKET (RUDAL AREA BLAST)</option>
                 </select>
 
@@ -265,7 +265,7 @@
                 </div>
                 
                 <div class="section-label" style="margin-top:8px;">KONTROL LAYAR:</div>
-                <div style="font-size:10px; color:#aaa; text-align:center; padding: 4px;">Usap/Drag jari di area layar mana saja untuk memutar tank.</div>
+                <div style="font-size:10px; color:#aaa; text-align:center; padding: 4px;">Usap/Swipe jari untuk berbelok. Tank berjalan otomatis ke depan terus menerus!</div>
                 <button class="btn-ff btn-sub" style="margin-top:8px;" onclick="closeSettings()">❌ TUTUP</button>
             </div>
         </div>
@@ -383,9 +383,9 @@
         resizeCanvas();
 
         const G = 16; 
-        const TANK_SIZE = 72; // Ukuran Tank Diperbesar Mantap
+        const TANK_SIZE = 76; // Ukuran Tank Super Keren
 
-        let S = 75; // Dinamis dihitung berdasarkan ukuran layar
+        let S = 75;
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let isSpectator = false;
@@ -625,11 +625,11 @@
         }
 
         function checkWallCollision(newX, newY) {
-            let left = newX + (S - TANK_SIZE)/2, right = left + TANK_SIZE;
-            let top = newY + (S - TANK_SIZE)/2, bottom = top + TANK_SIZE;
+            let left = newX, right = newX + S;
+            let top = newY, bottom = newY + S;
 
-            let minGridX = Math.floor(left / S), maxGridX = Math.floor(right / S);
-            let minGridY = Math.floor(top / S), maxGridY = Math.floor(bottom / S);
+            let minGridX = Math.floor(left / S), maxGridX = Math.floor((right - 1) / S);
+            let minGridY = Math.floor(top / S), maxGridY = Math.floor((bottom - 1) / S);
 
             for(let r = minGridY; r <= maxGridY; r++) {
                 for(let c = minGridX; c <= maxGridX; c++) {
@@ -683,11 +683,11 @@
                     targetX: 0, targetY: 0, targetAngle: 90,
                     color: i === mySlot && !isSpectator ? selectedColor : defaultColors[i % defaultColors.length],
                     hp: 200, maxHp: 200, kills: 0, score: 0, alive: true,
-                    spd: (1.8 + (i===mySlot && !isSpectator ? stats.spd*0.3 : 0.3)) * (isBot ? botSpdMulti : 1),
+                    spd: (2.2 + (i===mySlot && !isSpectator ? stats.spd*0.3 : 0.3)) * (isBot ? botSpdMulti : 1),
                     dmg: 35 + (i===mySlot && !isSpectator ? stats.dmg*10 : 0),
                     reload: 380 - (i===mySlot && !isSpectator ? stats.rld*40 : 0),
                     baseWeapon: weaponType, activePowerUp: null, powerUpTimer: 0,
-                    shieldTimer: 0, muzzleFlash: 0,
+                    shieldTimer: 0, muzzleFlash: 0, trackAnim: 0,
                     botDir: 90, botChangeDirTimer: 0, botReactionTimer: 0, botEvadeTimer: 0, difficulty: diff
                 });
             }
@@ -697,7 +697,7 @@
         function startNextRound(mapType = 0) {
             generateMap(mapType);
             
-            S = Math.min(cvs.width, cvs.height) / G; // Skala dinamis arena
+            S = Math.min(cvs.width, cvs.height) / G; 
 
             let spawnCoords = [
                 {x:1,y:1, angle:90}, {x:14,y:14, angle:270}, {x:14,y:1, angle:180}, {x:1,y:14, angle:0},
@@ -767,7 +767,7 @@
 
         // --- RESPONSIVE SWIPE & DRAG CONTROLS ---
         let touchStartX = 0, touchStartY = 0;
-        const SWIPE_THRESHOLD = 10; // Lebih sensitif untuk respon instan
+        const SWIPE_THRESHOLD = 8; 
 
         function handlePointerStart(x, y) {
             touchStartX = x; touchStartY = y;
@@ -783,7 +783,7 @@
                 } else {
                     tanks[mySlot].angle = diffY > 0 ? 90 : 270;
                 }
-                touchStartX = x; touchStartY = y; // Reset jangkar agar belok instan
+                touchStartX = x; touchStartY = y;
 
                 if (!isBotMode) {
                     broadcast({ type: 'SYNC_POS', slot: mySlot, x: tanks[mySlot].x, y: tanks[mySlot].y, angle: tanks[mySlot].angle });
@@ -940,14 +940,17 @@
                 }
             }
 
+            // AUTO MOVE UNTUK BOT
             let radDir = bot.botDir * Math.PI / 180;
-            let nextX = bot.x + Math.cos(radDir) * (bot.spd * 0.45); 
-            let nextY = bot.y + Math.sin(radDir) * (bot.spd * 0.45);
+            let nextX = bot.x + Math.cos(radDir) * bot.spd; 
+            let nextY = bot.y + Math.sin(radDir) * bot.spd;
 
             if(!checkWallCollision(nextX, nextY)) {
                 bot.x = nextX; bot.y = nextY; bot.angle = bot.botDir;
+                bot.trackAnim = (bot.trackAnim + 0.3) % 10;
             } else {
                 bot.botDir = (bot.botDir + 90) % 360;
+                bot.angle = bot.botDir;
             }
 
             let arenaWidth = G * S, arenaHeight = G * S;
@@ -958,7 +961,7 @@
 
             if(alignedX || alignedY) {
                 bot.botReactionTimer++;
-                if(bot.botReactionTimer >= 90) { 
+                if(bot.botReactionTimer >= 40) { 
                     fire(bot, false); 
                     bot.botReactionTimer = 0;
                 }
@@ -1026,6 +1029,7 @@
                 if(p && p.alive) {
                     if(isAutoFire) fire(p, true);
 
+                    // AUTO MOVE PEMAIN UTAMA (JALAN OTOMATIS KE DEPAN CONTINUOUSLY)
                     let rad = p.angle * Math.PI / 180;
                     let nextX = p.x + Math.cos(rad) * p.spd;
                     let nextY = p.y + Math.sin(rad) * p.spd;
@@ -1033,6 +1037,10 @@
                     if(!checkWallCollision(nextX, nextY)) {
                         p.x = nextX;
                         p.y = nextY;
+                        p.trackAnim = (p.trackAnim + 0.3) % 10;
+                    } else {
+                        // Jika mentok dinding, pantulkan / belokkan otomatis
+                        p.angle = (p.angle + 90) % 360;
                     }
 
                     let arenaWidth = G * S, arenaHeight = G * S;
@@ -1060,6 +1068,7 @@
                     if (diff > 180) diff -= 360;
                     if (diff < -180) diff += 360;
                     t.angle += diff * 0.3;
+                    t.trackAnim = (t.trackAnim + 0.3) % 10;
                 }
 
                 if(t.powerUpTimer > 0) {
@@ -1194,45 +1203,93 @@
                 ctx.translate(centerX, centerY);
 
                 if(t.shieldTimer > 0) {
-                    ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2);
-                    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3.5; ctx.shadowBlur = 18; ctx.shadowColor = '#00ffff'; ctx.stroke();
+                    ctx.beginPath(); ctx.arc(0, 0, 52, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 4; ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff'; ctx.stroke();
                 }
 
                 ctx.rotate(t.angle * Math.PI / 180);
                 let mainColor = t.activePowerUp ? '#ff0055' : t.color;
 
-                // GAMBAR TANK DIPERBESAR
-                ctx.fillStyle = '#11141c'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
-                ctx.fillRect(-36, -34, 72, 14); ctx.strokeRect(-36, -34, 72, 14);
-                ctx.fillRect(-36, 20, 72, 14); ctx.strokeRect(-36, 20, 72, 14);
+                // --- DESAIN TANK HEAVY CYBER ULTRA KEREN ---
+                // 1. Roda Rantai / Caterpillars dengan Efek Bergerak & Gerigi
+                ctx.fillStyle = '#0f141d'; 
+                ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+                ctx.fillRect(-38, -36, 76, 16); ctx.strokeRect(-38, -36, 76, 16);
+                ctx.fillRect(-38, 20, 76, 16); ctx.strokeRect(-38, 20, 76, 16);
 
-                ctx.fillStyle = '#0f172a'; ctx.fillRect(-28, -22, 56, 44);
-                ctx.strokeStyle = mainColor; ctx.lineWidth = 3; ctx.strokeRect(-28, -22, 56, 44);
-
-                ctx.fillStyle = '#1e293b'; ctx.strokeStyle = mainColor; ctx.lineWidth = 2.5;
-                let currentWp = t.activePowerUp || t.baseWeapon;
-
-                if(currentWp === 'laser') {
-                    ctx.fillRect(4, -5, 50, 10); ctx.strokeRect(4, -5, 50, 10); ctx.fillStyle = '#00ffff'; ctx.fillRect(48, -7, 8, 14);
-                } else if(currentWp === 'nuke') {
-                    ctx.fillRect(4, -10, 44, 20); ctx.strokeRect(4, -10, 44, 20); ctx.fillStyle = '#ff0055'; ctx.fillRect(42, -12, 10, 24);
-                } else if(currentWp === 'shotgun') {
-                    ctx.fillRect(4, -12, 32, 5); ctx.fillRect(6, -4, 38, 8); ctx.fillRect(4, 7, 32, 5); ctx.strokeRect(6, -4, 38, 8);
-                } else if(currentWp === 'rocket') {
-                    ctx.fillRect(4, -12, 38, 24); ctx.strokeRect(4, -12, 38, 24); ctx.fillStyle = '#ffaa00'; ctx.fillRect(36, -10, 8, 20);
-                } else {
-                    ctx.fillRect(4, -7, 42, 14); ctx.strokeRect(4, -7, 42, 14); ctx.fillStyle = mainColor; ctx.fillRect(42, -9, 8, 18);
+                // Gerigi Rantai Bergerak
+                ctx.fillStyle = mainColor;
+                for(let gx = -34 + (t.trackAnim || 0); gx < 34; gx += 10) {
+                    ctx.fillRect(gx, -34, 4, 12);
+                    ctx.fillRect(gx, 22, 4, 12);
                 }
 
-                ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fillStyle = '#090d16'; ctx.fill();
+                // 2. Bodi Utama Metalik Heavy Armor
+                ctx.fillStyle = '#090d16'; 
+                ctx.beginPath();
+                ctx.moveTo(-30, -22); ctx.lineTo(30, -22); ctx.lineTo(38, -12);
+                ctx.lineTo(38, 12); ctx.lineTo(30, 22); ctx.lineTo(-30, 22);
+                ctx.closePath();
+                ctx.fill();
                 ctx.strokeStyle = mainColor; ctx.lineWidth = 3; ctx.stroke();
+
+                // Front Armor Plate Highlights
+                ctx.fillStyle = mainColor; ctx.globalAlpha = 0.3;
+                ctx.fillRect(10, -18, 20, 36);
+                ctx.globalAlpha = 1.0;
+
+                // 3. Meriam Utama & Moncong Senjata Dual Neon Glow
+                let currentWp = t.activePowerUp || t.baseWeapon;
+                ctx.shadowBlur = 10; ctx.shadowColor = mainColor;
+
+                if(currentWp === 'laser') {
+                    ctx.fillStyle = '#020617'; ctx.fillRect(0, -6, 54, 12);
+                    ctx.fillStyle = '#00ffff'; ctx.fillRect(4, -2, 50, 4);
+                    ctx.fillRect(48, -8, 8, 16);
+                } else if(currentWp === 'nuke') {
+                    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(0, -12, 46, 24);
+                    ctx.fillStyle = '#ff0055'; ctx.fillRect(40, -14, 10, 28);
+                } else if(currentWp === 'shotgun') {
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(0, -12, 38, 6); ctx.fillRect(0, -4, 44, 8); ctx.fillRect(0, 6, 38, 6);
+                    ctx.fillStyle = mainColor; ctx.fillRect(38, -5, 6, 10);
+                } else if(currentWp === 'rocket') {
+                    ctx.fillStyle = '#1a1003'; ctx.fillRect(0, -14, 40, 28);
+                    ctx.fillStyle = '#ffaa00'; ctx.fillRect(10, -10, 28, 20);
+                } else {
+                    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, -8, 46, 16);
+                    ctx.strokeStyle = mainColor; ctx.strokeRect(0, -8, 46, 16);
+                    ctx.fillStyle = mainColor; ctx.fillRect(40, -10, 8, 20);
+                }
+                ctx.shadowBlur = 0;
+
+                // Muzzle Flash / Efek Tembakan Neon
+                if(t.muzzleFlash && t.muzzleFlash > 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 15; ctx.shadowColor = '#ffff00';
+                    ctx.beginPath(); ctx.arc(52, 0, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                    t.muzzleFlash--;
+                }
+
+                // 4. Kubah Menara (Turret Dome Cyber Armor)
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath(); ctx.arc(-2, 0, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = mainColor; ctx.lineWidth = 3.5; ctx.stroke();
+
+                // Core Inti Neon Tengah
+                ctx.fillStyle = mainColor; ctx.shadowBlur = 12; ctx.shadowColor = mainColor;
+                ctx.beginPath(); ctx.arc(-2, 0, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+
                 ctx.restore();
 
+                // Nama Tank & Bar Darah Futuristik
                 ctx.fillStyle = t.color; ctx.font = '900 14px sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText(t.name + (t.activePowerUp ? ` [${t.activePowerUp.toUpperCase()}]` : ''), centerX, centerY - 48);
+                ctx.fillText(t.name + (t.activePowerUp ? ` [${t.activePowerUp.toUpperCase()}]` : ''), centerX, centerY - 52);
 
-                let barW = 64, barH = 8, barX = centerX - barW / 2, barY = centerY - 40;
-                ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+                let barW = 68, barH = 8, barX = centerX - barW / 2, barY = centerY - 44;
+                ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.strokeRect(barX - 1, barY - 1, barW + 2, barH + 2);
 
                 let hpRatio = Math.max(0, t.hp / t.maxHp);
@@ -1241,7 +1298,7 @@
             });
 
             bullets.forEach(b => {
-                ctx.fillStyle = b.c; ctx.shadowColor = b.c; ctx.shadowBlur = 8;
+                ctx.fillStyle = b.c; ctx.shadowColor = b.c; ctx.shadowBlur = 12;
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.rad, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
             });
 
@@ -1276,7 +1333,7 @@
                 if(specT.alive) {
                     ctx.save();
                     ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 3;
-                    ctx.beginPath(); ctx.arc(specT.x + S/2, specT.y + S/2, 55, 0, Math.PI * 2);
+                    ctx.beginPath(); ctx.arc(specT.x + S/2, specT.y + S/2, 58, 0, Math.PI * 2);
                     ctx.stroke();
                     ctx.restore();
                 }
