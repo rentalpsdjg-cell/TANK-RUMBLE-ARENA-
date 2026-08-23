@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - SYNC FIXED EDITION</title>
+    <title>TANK RUMBLE VIP - ULTRA SYNC EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -543,7 +543,7 @@
             }
         }
 
-        // --- NETWORK DATA HANDLER (FIXED DESYNC) ---
+        // --- NETWORK DATA HANDLER (SMOOTH & ULTRA SYNC) ---
         function handleData(data, senderSlot) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
@@ -560,10 +560,17 @@
                         if((idx + 1) !== senderSlot && c && c.open) c.send(data);
                     });
                 }
-                if(tanks[data.slot] && data.slot !== mySlot) {
-                    tanks[data.slot].targetX = data.x; 
-                    tanks[data.slot].targetY = data.y; 
-                    tanks[data.slot].targetAngle = data.angle;
+                let t = tanks[data.slot];
+                if(t && data.slot !== mySlot) {
+                    t.targetX = data.x; 
+                    t.targetY = data.y; 
+                    t.targetAngle = data.angle;
+                    
+                    // KOREKSI LERP JIKA LAG SANGAT PARAH
+                    if(Math.hypot(t.x - data.x, t.y - data.y) > S * 2) {
+                        t.x = data.x;
+                        t.y = data.y;
+                    }
                 }
             } else if(data.type === 'FIRE') {
                 if(isHost && senderSlot !== undefined) {
@@ -573,7 +580,6 @@
                 }
                 if(tanks[data.slot]) fire(tanks[data.slot], false);
             } else if(data.type === 'SYNC_STATE') {
-                // SINKRONISASI TANK DARI HOST KE CLIENT
                 if(!isHost && data.tanksData) {
                     data.tanksData.forEach(st => {
                         let t = tanks[st.id];
@@ -945,8 +951,8 @@
                 if(powerUps.length < 4) spawnPowerUp();
             }
 
-            // 1. KONTROL TANK LOCAL
-            if(!isSpectator) {
+            // 1. KONTROL & LOGIKA TANK LOKAL (30 FPS TICKRATE NETWORK)
+            if(!isSpectator && tanks[mySlot]) {
                 let p = tanks[mySlot];
                 if(p && p.alive) {
                     let nextX = p.x, nextY = p.y, moved = false;
@@ -960,23 +966,24 @@
 
                     if(moved && !checkWallCollision(nextX, nextY)) {
                         p.x = nextX; p.y = nextY;
-                        
-                        let now = Date.now();
-                        if(!isBotMode && now - lastNetworkSend > 40) { 
-                            lastNetworkSend = now;
-                            broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
-                        }
+                    }
+
+                    // SEND POSISI KONTINU TIAP ~33MS
+                    let now = Date.now();
+                    if(!isBotMode && (now - lastNetworkSend > 33)) { 
+                        lastNetworkSend = now;
+                        broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
                     }
                 }
             }
 
-            // 2. INTERPOLASI TANK OTHER PLAYERS
+            // 2. INTERPOLASI GERAKAN HALUS (SMOOTH LERP 0.25)
             tanks.forEach(t => { 
                 if(t.isBot) {
                     updateBotLogic(t);
                 } else if(t.id !== mySlot && t.alive) {
-                    t.x += (t.targetX - t.x) * 0.3;
-                    t.y += (t.targetY - t.y) * 0.3;
+                    t.x += (t.targetX - t.x) * 0.25;
+                    t.y += (t.targetY - t.y) * 0.25;
 
                     let diff = t.targetAngle - t.angle;
                     if (diff > 180) diff -= 360;
@@ -1045,10 +1052,10 @@
                 if(b.x<0 || b.y<0 || b.x>INTERNAL_RES || b.y>INTERNAL_RES) bullets.splice(i,1);
             }
 
-            // HOST PERIODIC STATE BROADCAST (SINKRONISASI OTOMATIS)
+            // HOST STATE BROADCAST BERKALA (~160MS)
             if(isHost) {
                 syncTimer++;
-                if(syncTimer > 15) {
+                if(syncTimer > 10) {
                     syncTimer = 0;
                     let tanksData = tanks.map(t => ({ id: t.id, hp: t.hp, alive: t.alive, kills: t.kills, score: t.score }));
                     broadcast({ type: 'SYNC_STATE', tanksData: tanksData });
