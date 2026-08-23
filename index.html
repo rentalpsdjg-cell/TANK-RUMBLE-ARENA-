@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - RESPONSIVE ALL DEVICES</title>
+    <title>TANK RUMBLE VIP - FIT MOBILE CONTROLS</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -21,31 +21,31 @@
         
         #game-container { 
             position: relative; width: 100vw; height: 100vh; height: 100dvh;
-            max-width: 600px;
+            max-width: 500px;
             display: flex; flex-direction: column; justify-content: space-between; align-items: center; 
-            background: #020205; padding: clamp(4px, 1.5vh, 12px); box-sizing: border-box;
+            background: #020205; padding: clamp(2px, 1vh, 8px); box-sizing: border-box;
         }
 
-        /* DYNAMIC RESPONSIVE HUD */
+        /* HUD LAYOUT COMPACT */
         .hud-layer { 
             width: 100%; display: flex; justify-content: space-between; align-items: center; 
             z-index: 10; background: rgba(10, 12, 20, 0.95); border: 1.5px solid rgba(0, 255, 204, 0.5);
-            border-radius: 8px; padding: clamp(2px, 1vh, 6px) clamp(4px, 1.5vw, 10px); gap: 4px; flex-shrink: 0;
+            border-radius: 8px; padding: clamp(2px, 0.8vh, 6px) clamp(4px, 1vw, 8px); gap: 4px; flex-shrink: 0;
         }
 
         .hud-btn-group { display: flex; gap: 4px; align-items: center; }
         .btn-hud-action { 
             background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid #ffaa00; 
-            padding: clamp(3px, 0.8vh, 6px) clamp(4px, 1vw, 8px); border-radius: 6px; 
-            font-weight: 900; font-size: clamp(8px, 1.2vh, 11px); cursor: pointer; 
+            padding: clamp(3px, 0.6vh, 5px) clamp(4px, 1vw, 8px); border-radius: 6px; 
+            font-weight: 900; font-size: clamp(8px, 1.1vh, 10px); cursor: pointer; 
         }
         .btn-hud-exit { background: rgba(204,0,0,0.2); color: #ff3366; border-color: #ff3366; }
 
         .hud-card { display: flex; flex-direction: column; align-items: flex-end; }
-        .hp-bar-bg { width: clamp(60px, 15vw, 100px); height: clamp(6px, 1vh, 10px); background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
+        .hp-bar-bg { width: clamp(50px, 14vw, 80px); height: clamp(5px, 0.8vh, 8px); background: #111; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; margin-top: 2px; }
         .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff66); width: 100%; transition: width 0.15s ease-out; }
 
-        /* AUTOFIT CANVAS WRAPPER */
+        /* AUTOFIT CANVAS ARENA */
         .canvas-wrapper {
             flex: 1 1 auto; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 0; margin: 2px 0;
         }
@@ -54,37 +54,36 @@
             max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 10px; 
         }
 
-        /* CONTROLS DYNAMIC HEIGHT */
+        /* CONTROLS OVERLAY - PERFECT MOBILE FIT */
         .controls-overlay { 
-            width: 100%; height: clamp(80px, 18vh, 130px); 
-            display: flex; justify-content: space-between; align-items: center; padding: 0 4px; z-index: 20; flex-shrink: 0;
+            width: 100%; height: clamp(90px, 16vh, 120px); 
+            display: flex; justify-content: space-between; align-items: center; padding: 0 8px 4px 8px; z-index: 20; flex-shrink: 0;
         }
         
         .dpad-container { 
-            display: grid; grid-template-columns: repeat(3, clamp(28px, 6vh, 42px)); 
-            grid-template-rows: repeat(3, clamp(28px, 6vh, 42px)); gap: clamp(2px, 0.5vh, 4px); 
+            display: grid; grid-template-columns: repeat(3, clamp(28px, 5.2vh, 38px)); 
+            grid-template-rows: repeat(3, clamp(28px, 5.2vh, 38px)); gap: 3px; 
         }
         .btn-ctrl { 
             background: rgba(18, 20, 32, 0.9); border: 1.5px solid #00ffcc; color: #fff; border-radius: 8px; 
-            display: flex; justify-content: center; align-items: center; font-size: clamp(12px, 2.5vh, 18px); font-weight: bold; touch-action: manipulation; 
+            display: flex; justify-content: center; align-items: center; font-size: clamp(12px, 2vh, 16px); font-weight: bold; touch-action: manipulation; 
         }
         .btn-ctrl:active { background: #00ffcc; color: #000; }
         
-        .fire-container { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-        .btn-fire-ff { 
-            width: clamp(50px, 11vh, 75px); height: clamp(50px, 11vh, 75px); border-radius: 50%; 
-            background: radial-gradient(circle, #ff0055, #660011); 
-            border: 2px solid #00ffcc; color: #fff; font-size: clamp(9px, 1.5vh, 12px); font-weight: 900; 
-            display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(255,0,85,0.6); touch-action: manipulation; cursor: pointer; 
-        }
+        .fire-container { display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
+        /* TOMBOL AUTO FIRE KHUSUS AUTO ONLY */
         .btn-auto-fire { 
-            background: rgba(10, 12, 20, 0.9); border: 1px solid #ffaa00; color: #ffaa00; 
-            padding: 2px 6px; border-radius: 10px; font-size: clamp(7px, 1.1vh, 10px); font-weight: 900; cursor: pointer; 
+            background: rgba(10, 12, 20, 0.95); border: 2px solid #ffaa00; color: #ffaa00; 
+            padding: clamp(8px, 1.5vh, 12px) clamp(12px, 2.5vw, 18px); border-radius: 20px; 
+            font-size: clamp(10px, 1.4vh, 13px); font-weight: 900; cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3); touch-action: manipulation;
         }
-        .btn-auto-fire.active { background: #ffaa00; color: #000; }
+        .btn-auto-fire.active { 
+            background: #ffaa00; color: #000; box-shadow: 0 0 15px rgba(255, 170, 0, 0.8); 
+        }
 
-        /* MODAL SCREEN ALL MATCHING */
+        /* MODAL SCREEN */
         .modal-screen { 
             position: absolute; inset: 0; background: rgba(2, 3, 8, 0.97); 
             display: flex; flex-direction: column; justify-content: flex-start; align-items: center; 
@@ -155,7 +154,7 @@
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- TOUCH CONTROLS -->
+        <!-- TOUCH CONTROLS WITH AUTO FIRE ONLY -->
         <div class="controls-overlay" id="player-controls">
             <div class="dpad-container">
                 <div></div><div class="btn-ctrl" id="btn-u">▲</div><div></div>
@@ -164,8 +163,7 @@
             </div>
 
             <div class="fire-container">
-                <button class="btn-auto-fire" id="btn-auto" onclick="toggleAutoFire()">AUTO FIRE: OFF</button>
-                <div class="btn-fire-ff" id="btn-f">🎯 FIRE</div>
+                <button class="btn-auto-fire active" id="btn-auto" onclick="toggleAutoFire()">⚡ AUTO FIRE: ON</button>
             </div>
         </div>
 
@@ -356,7 +354,7 @@
 
         let selectedColor = '#00ffcc';
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
-        let isAutoFire = false;
+        let isAutoFire = true; // DEFAULT ON PERMINTAAN USER
 
         function setNetStatus(txt, color = '#00ffcc') {
             let el = document.getElementById('network-status');
@@ -367,7 +365,7 @@
             isAutoFire = !isAutoFire;
             let btn = document.getElementById('btn-auto');
             btn.classList.toggle('active', isAutoFire);
-            btn.innerText = `AUTO FIRE: ${isAutoFire?'ON':'OFF'}`;
+            btn.innerText = `⚡ AUTO FIRE: ${isAutoFire?'ON':'OFF'}`;
         }
 
         function selectSkin(color, el) {
@@ -638,6 +636,7 @@
 
         function bindTouch(id, keyName) {
             let el = document.getElementById(id);
+            if(!el) return;
             const press = (e) => { e.preventDefault(); keys[keyName] = true; };
             const release = (e) => { e.preventDefault(); keys[keyName] = false; };
             el.addEventListener('touchstart', press, {passive: false});
@@ -648,7 +647,6 @@
 
         bindTouch('btn-u', 'ArrowUp'); bindTouch('btn-d', 'ArrowDown');
         bindTouch('btn-l', 'ArrowLeft'); bindTouch('btn-r', 'ArrowRight');
-        bindTouch('btn-f', ' ');
 
         function openSettings() { document.getElementById('settings-screen').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settings-screen').style.display = 'none'; }
@@ -824,7 +822,8 @@
                 else if(keys['ArrowLeft'] || keys['a']) { nextX -= p.spd; p.angle = 180; moved = true; }
                 else if(keys['ArrowRight'] || keys['d']) { nextX += p.spd; p.angle = 0; moved = true; }
 
-                if(keys[' '] || isAutoFire) fire(p, true);
+                // AUTO FIRE OTOMATIS JIKA AKTIF
+                if(isAutoFire) fire(p, true);
 
                 if(moved && !checkWallCollision(nextX, nextY)) {
                     p.x = nextX; p.y = nextY;
