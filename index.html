@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - FIX MULTIPLAYER ONLINE & SMOOTH</title>
+    <title>TANK RUMBLE VIP - SYNC FIXED EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -397,6 +397,7 @@
         let stats = { points: 3, spd: 1, dmg: 1, rld: 1 };
         let isAutoFire = true;
         let lastNetworkSend = 0;
+        let syncTimer = 0;
         let animationFrameId = null;
 
         function setNetStatus(txt, color = '#00ffcc') {
@@ -443,7 +444,7 @@
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
-        // --- MULTIPLAYER ENGINE FIX ---
+        // --- MULTIPLAYER ENGINE ---
         function initPeerServer(customId = null) {
             if(peer) { try { peer.destroy(); } catch(e){} }
             let config = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
@@ -476,10 +477,7 @@
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
                     conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit }); 
                     
-                    // Broadcast info tank baru ke seluruh player lain
                     broadcast({ type: 'UPDATE_PLAYERS', total: connections.length + 1 });
-                    
-                    // Sync powerups yang ada di map
                     powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
                 });
 
@@ -545,7 +543,7 @@
             }
         }
 
-        // --- NETWORK HANDLER REVISED ---
+        // --- NETWORK DATA HANDLER (FIXED DESYNC) ---
         function handleData(data, senderSlot) {
             if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
@@ -554,9 +552,9 @@
                 currentRound = data.round || 1; maxPlayersLimit = data.maxPlayers;
                 initFullMatch(data.mapType || 0, data.weaponType || 'cannon');
             } else if(data.type === 'NEXT_ROUND') {
-                currentRound = data.round; startNextRound();
+                currentRound = data.round;
+                startNextRound();
             } else if(data.type === 'SYNC_POS') {
-                // Jika data dari client ke Host, Host teruskan (relay) ke client lain
                 if(isHost && senderSlot !== undefined) {
                     connections.forEach((c, idx) => {
                         if((idx + 1) !== senderSlot && c && c.open) c.send(data);
@@ -574,6 +572,21 @@
                     });
                 }
                 if(tanks[data.slot]) fire(tanks[data.slot], false);
+            } else if(data.type === 'SYNC_STATE') {
+                // SINKRONISASI TANK DARI HOST KE CLIENT
+                if(!isHost && data.tanksData) {
+                    data.tanksData.forEach(st => {
+                        let t = tanks[st.id];
+                        if(t) {
+                            t.hp = st.hp;
+                            t.alive = st.alive;
+                            t.kills = st.kills;
+                            t.score = st.score;
+                        }
+                    });
+                }
+            } else if(data.type === 'GAME_OVER_ALL') {
+                showFinalLeaderboard(data.leaderboard);
             } else if(data.type === 'RESET_ROOM') {
                 currentRound = 1; initFullMatch(0, 'cannon');
                 document.getElementById('win-screen').style.display = 'none';
@@ -582,12 +595,8 @@
             } else if(data.type === 'REMOVE_POWERUP') {
                 powerUps = powerUps.filter(p => p.id !== data.id);
                 if(tanks[data.slot]) {
-                    if(data.powerType === 'shield') {
-                        tanks[data.slot].shieldTimer = 300;
-                    } else {
-                        tanks[data.slot].activePowerUp = data.powerType;
-                        tanks[data.slot].powerUpTimer = 350;
-                    }
+                    if(data.powerType === 'shield') tanks[data.slot].shieldTimer = 300;
+                    else { tanks[data.slot].activePowerUp = data.powerType; tanks[data.slot].powerUpTimer = 350; }
                 }
             }
         }
@@ -747,7 +756,6 @@
         window.addEventListener('keydown', e => keys[e.key] = true);
         window.addEventListener('keyup', e => keys[e.key] = false);
 
-        // --- BIND TOUCH PERBAIKAN STUCK MOVE ---
         function bindTouch(id, keyName) {
             let el = document.getElementById(id);
             if(!el) return;
@@ -880,7 +888,10 @@
             }
         }
 
+        // --- ROUND END (HOST AUTHORITY) ---
         function handleRoundEnd(roundWinner) {
+            if(!isHost) return; 
+
             isGameOver = true;
             if(roundWinner) roundWinner.score += 200;
 
@@ -888,16 +899,43 @@
                 speakIndo(`Ronde ${currentRound} selesai`);
                 setTimeout(() => {
                     currentRound++;
-                    if(isHost && !isBotMode) broadcast({ type: 'NEXT_ROUND', round: currentRound });
+                    broadcast({ type: 'NEXT_ROUND', round: currentRound });
                     startNextRound();
                 }, 3000);
             } else {
                 speakIndo("Pertandingan selesai!");
-                setTimeout(() => { showFinalLeaderboard(); }, 1000);
+                let sortedTanks = [...tanks].sort((a,b) => b.score - a.score);
+                setTimeout(() => { 
+                    broadcast({ type: 'GAME_OVER_ALL', leaderboard: sortedTanks });
+                    showFinalLeaderboard(sortedTanks); 
+                }, 1000);
             }
         }
 
-        // --- GAME LOOP & UPDATER ---
+        function showFinalLeaderboard(sortedTanks) {
+            let listData = sortedTanks || [...tanks].sort((a,b) => b.score - a.score);
+            document.getElementById('win-screen').style.display = 'flex';
+            let champ = listData[0];
+
+            document.getElementById('win-title').innerText = "GRAND CHAMPION!";
+            document.getElementById('win-sub').innerText = `JUARA MATCH: ${champ.name}`;
+
+            let tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+
+            listData.forEach((t, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${index+1} ${index===0 ? '🏆' : ''}</td>
+                    <td style="color:${t.color}; font-weight:bold;">${t.name}</td>
+                    <td>${t.kills}</td>
+                    <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- GAME LOOP ---
         function update() {
             if(isGameOver) return;
 
@@ -907,7 +945,7 @@
                 if(powerUps.length < 4) spawnPowerUp();
             }
 
-            // 1. KONTROL TANK SENDIRI
+            // 1. KONTROL TANK LOCAL
             if(!isSpectator) {
                 let p = tanks[mySlot];
                 if(p && p.alive) {
@@ -924,7 +962,7 @@
                         p.x = nextX; p.y = nextY;
                         
                         let now = Date.now();
-                        if(!isBotMode && now - lastNetworkSend > 40) { // Sync 25Hz untuk multiplayer cepat
+                        if(!isBotMode && now - lastNetworkSend > 40) { 
                             lastNetworkSend = now;
                             broadcast({ type: 'SYNC_POS', slot: mySlot, x: p.x, y: p.y, angle: p.angle });
                         }
@@ -932,7 +970,7 @@
                 }
             }
 
-            // 2. INTERPOLASI (LERP) TANK NETWORK / LAWAN
+            // 2. INTERPOLASI TANK OTHER PLAYERS
             tanks.forEach(t => { 
                 if(t.isBot) {
                     updateBotLogic(t);
@@ -972,7 +1010,7 @@
                 }
             });
 
-            // 3. LOGIKA PELURU
+            // 3. LOGIKA BULLETS & DAMAGE
             for(let i=bullets.length-1; i>=0; i--) {
                 let b = bullets[i];
                 b.x += b.vx; b.y += b.vy;
@@ -1007,34 +1045,21 @@
                 if(b.x<0 || b.y<0 || b.x>INTERNAL_RES || b.y>INTERNAL_RES) bullets.splice(i,1);
             }
 
+            // HOST PERIODIC STATE BROADCAST (SINKRONISASI OTOMATIS)
+            if(isHost) {
+                syncTimer++;
+                if(syncTimer > 15) {
+                    syncTimer = 0;
+                    let tanksData = tanks.map(t => ({ id: t.id, hp: t.hp, alive: t.alive, kills: t.kills, score: t.score }));
+                    broadcast({ type: 'SYNC_STATE', tanksData: tanksData });
+                }
+            }
+
             if(!isSpectator && tanks[mySlot]) {
                 document.getElementById('p1-kills').innerText = tanks[mySlot].kills;
                 document.getElementById('hp-bar').style.width = Math.max(0, (tanks[mySlot].hp / tanks[mySlot].maxHp) * 100) + '%';
             }
             document.getElementById('alive-count').innerText = tanks.filter(x => x.alive).length;
-        }
-
-        function showFinalLeaderboard() {
-            document.getElementById('win-screen').style.display = 'flex';
-            let sortedTanks = [...tanks].sort((a,b) => b.score - a.score);
-            let champ = sortedTanks[0];
-
-            document.getElementById('win-title').innerText = "GRAND CHAMPION!";
-            document.getElementById('win-sub').innerText = `JUARA MATCH: ${champ.name}`;
-
-            let tbody = document.getElementById('leaderboard-body');
-            tbody.innerHTML = '';
-
-            sortedTanks.forEach((t, index) => {
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>#${index+1} ${index===0 ? '🏆' : ''}</td>
-                    <td style="color:${t.color}; font-weight:bold;">${t.name}</td>
-                    <td>${t.kills}</td>
-                    <td style="color:#ffaa00; font-weight:bold;">${t.score} PTS</td>
-                `;
-                tbody.appendChild(tr);
-            });
         }
 
         function draw() {
