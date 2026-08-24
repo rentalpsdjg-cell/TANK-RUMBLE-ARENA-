@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TANK RUMBLE VIP - AUTO JOIN MULTIPLAYER</title>
+    <title>TANK RUMBLE VIP - FIX & STABLE EDITION</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { 
@@ -328,8 +328,18 @@
         }
         document.addEventListener('fullscreenchange', updateFsBtn);
 
-        // --- AUDIO ENGINE ---
-        const actx = new (window.AudioContext || window.webkitAudioContext)();
+        // --- AUDIO ENGINE SAFE INITIALIZATION ---
+        let actx = null;
+        function getAudioContext() {
+            if(!actx) {
+                actx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if(actx.state === 'suspended') {
+                actx.resume();
+            }
+            return actx;
+        }
+
         let soundEnabled = true, voiceEnabled = true, bgmEnabled = true;
         let bgmInterval = null, bgmStep = 0;
 
@@ -338,18 +348,18 @@
             bgmStep = 0;
             bgmInterval = setInterval(() => {
                 if (!bgmEnabled || isGameOver) return;
-                if (actx.state === 'suspended') actx.resume();
-                let now = actx.currentTime;
+                let audio = getAudioContext();
+                let now = audio.currentTime;
                 
                 let bassFreqs = [110, 110, 130, 98, 110, 110, 146, 123];
                 let freq = bassFreqs[bgmStep % bassFreqs.length];
 
-                let osc = actx.createOscillator();
-                let gain = actx.createGain();
+                let osc = audio.createOscillator();
+                let gain = audio.createGain();
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(freq, now);
 
-                let filter = actx.createBiquadFilter();
+                let filter = audio.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(400, now);
                 filter.frequency.exponentialRampToValueAtTime(80, now + 0.12);
@@ -359,7 +369,7 @@
 
                 osc.connect(filter);
                 filter.connect(gain);
-                gain.connect(actx.destination);
+                gain.connect(audio.destination);
 
                 osc.start(now);
                 osc.stop(now + 0.12);
@@ -380,54 +390,54 @@
         
         function playSound(type) {
             if(!soundEnabled) return;
-            if (actx.state === 'suspended') actx.resume();
-            let now = actx.currentTime;
+            let audio = getAudioContext();
+            let now = audio.currentTime;
 
             if(type === 'shoot') {
-                let osc = actx.createOscillator(), gain = actx.createGain();
+                let osc = audio.createOscillator(), gain = audio.createGain();
                 osc.type = 'triangle'; osc.frequency.setValueAtTime(320, now);
                 osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
                 gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.connect(gain); gain.connect(actx.destination);
+                osc.connect(gain); gain.connect(audio.destination);
                 osc.start(); osc.stop(now + 0.15);
             } else if(type === 'powerup') {
-                let osc = actx.createOscillator(), gain = actx.createGain();
+                let osc = audio.createOscillator(), gain = audio.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(200, now);
                 osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
                 gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                osc.connect(gain); gain.connect(actx.destination);
+                osc.connect(gain); gain.connect(audio.destination);
                 osc.start(); osc.stop(now + 0.25);
             } else if(type === 'heal') {
-                let osc = actx.createOscillator(), gain = actx.createGain();
+                let osc = audio.createOscillator(), gain = audio.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(300, now);
                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
                 gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.connect(gain); gain.connect(actx.destination);
+                osc.connect(gain); gain.connect(audio.destination);
                 osc.start(); osc.stop(now + 0.3);
             } else if(type === 'boom') {
-                let bufSize = actx.sampleRate * 0.4, buffer = actx.createBuffer(1, bufSize, actx.sampleRate), data = buffer.getChannelData(0);
+                let bufSize = audio.sampleRate * 0.4, buffer = audio.createBuffer(1, bufSize, audio.sampleRate), data = buffer.getChannelData(0);
                 for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-                let noise = actx.createBufferSource(); noise.buffer = buffer;
-                let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; 
+                let noise = audio.createBufferSource(); noise.buffer = buffer;
+                let filter = audio.createBiquadFilter(); filter.type = 'lowpass'; 
                 filter.frequency.setValueAtTime(500, now); filter.frequency.exponentialRampToValueAtTime(30, now + 0.4);
-                let g = actx.createGain(); g.gain.setValueAtTime(0.6, now); 
+                let g = audio.createGain(); g.gain.setValueAtTime(0.6, now); 
                 g.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                noise.connect(filter); filter.connect(g); g.connect(actx.destination); noise.start();
+                noise.connect(filter); filter.connect(g); g.connect(audio.destination); noise.start();
             } else if(type === 'mega_boom') {
-                let bufSize = actx.sampleRate * 0.9, buffer = actx.createBuffer(1, bufSize, actx.sampleRate), data = buffer.getChannelData(0);
+                let bufSize = audio.sampleRate * 0.9, buffer = audio.createBuffer(1, bufSize, audio.sampleRate), data = buffer.getChannelData(0);
                 for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-                let noise = actx.createBufferSource(); noise.buffer = buffer;
-                let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; 
+                let noise = audio.createBufferSource(); noise.buffer = buffer;
+                let filter = audio.createBiquadFilter(); filter.type = 'lowpass'; 
                 filter.frequency.setValueAtTime(800, now); filter.frequency.exponentialRampToValueAtTime(20, now + 0.9);
-                let g = actx.createGain(); g.gain.setValueAtTime(1.0, now); 
+                let g = audio.createGain(); g.gain.setValueAtTime(1.0, now); 
                 g.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
-                noise.connect(filter); filter.connect(g); g.connect(actx.destination); noise.start();
+                noise.connect(filter); filter.connect(g); g.connect(audio.destination); noise.start();
             } else if(type === 'alert') {
-                let osc = actx.createOscillator(), gain = actx.createGain();
+                let osc = audio.createOscillator(), gain = audio.createGain();
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, now);
                 osc.frequency.setValueAtTime(300, now + 0.15);
                 gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.connect(gain); gain.connect(actx.destination);
+                osc.connect(gain); gain.connect(audio.destination);
                 osc.start(); osc.stop(now + 0.3);
             }
         }
@@ -534,9 +544,7 @@
                         { urls: 'stun:stun.l.google.com:19302' }, 
                         { urls: 'stun:stun1.l.google.com:19302' },
                         { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' },
-                        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
-                        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
+                        { urls: 'stun:global.stun.twilio.com:3478' }
                     ] 
                 } 
             };
@@ -582,7 +590,6 @@
                     broadcast({ type: 'UPDATE_PLAYERS', total: connections.filter(c => c && c.open).length + 1, maxPlayers: maxPlayersLimit });
                     powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
 
-                    // PERBAIKAN: Jika Host sudah bermain, langsung kirim data START MATCH ke pemain baru agar AUTO-JOIN arena!
                     if (tanks.length > 0 && !isGameOver) {
                         let mapType = document.getElementById('map-select').value;
                         let weaponType = document.getElementById('weapon-select').value;
@@ -631,7 +638,6 @@
                     setNetStatus(isSpectator ? "MASUK SEBAGAI JURI!" : "BERHASIL MASUK!", "#00ff66");
                     speakIndo(isSpectator ? "Mode Juri Aktif" : "Berhasil terhubung!"); 
                     
-                    // PERBAIKAN: Langsung persiapkan arena lokal saat terkoneksi ke Host
                     let mapType = document.getElementById('map-select').value;
                     let weaponType = document.getElementById('weapon-select').value;
                     initFullMatch(mapType, weaponType);
@@ -882,7 +888,6 @@
 
             document.getElementById('round-indicator').innerText = `ROUND ${currentRound}/${TOTAL_ROUNDS}`;
             
-            // PERBAIKAN: Langsung tutup layar menu modal begitu ronde dimulai!
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('win-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'none';
@@ -1004,7 +1009,7 @@
         cvs.addEventListener('mouseup', e => handlePointerEnd(e.clientX, e.clientY));
 
         window.addEventListener('keydown', e => {
-            if(!tanks[mySlot] || !tanks[mySlot].alive) return;
+            if(!tanks[mySlot] || !tanks[mySlot].alive || isSpectator) return;
             if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') tanks[mySlot].angle = 270;
             if(e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') tanks[mySlot].angle = 90;
             if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') tanks[mySlot].angle = 180;
@@ -1020,7 +1025,7 @@
         function resetOnlineRoom() { initFullMatch(0, 'cannon'); broadcast({ type: 'RESET_ROOM' }); }
 
         function fire(t, isLocal = true) {
-            if(!t.alive || isGameOver) return;
+            if(!t || !t.alive || isGameOver) return;
             let now = Date.now();
             let currentReload = (t.activePowerUp === 'laser' ? 120 : t.reload) / gameSpeed;
             if(t.lastF && now - t.lastF < currentReload) return;
