@@ -18,6 +18,34 @@
             overflow: hidden; background: #000; color: #fff; 
             position: fixed; inset: 0;
         }
+
+        /* PERINGATAN BILA LAYAR MASIH PORTRAIT */
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #020205;
+            z-index: 99999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        #rotate-warning h2 {
+            color: #00ffcc;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        #rotate-warning p {
+            color: #ffaa00;
+            font-size: 14px;
+        }
+        @media screen and (orientation: portrait) {
+            #rotate-warning {
+                display: flex;
+            }
+        }
         
         #game-container { 
             position: relative; width: 100%; height: 100%;
@@ -137,6 +165,12 @@
     </style>
 </head>
 <body>
+
+    <!-- OVERLAY WARNING LANDSCAPE -->
+    <div id="rotate-warning">
+        <h2>🔄 PUTAR HP KAMU!</h2>
+        <p>Mainkan game ini dalam mode Landscape untuk pengalaman terbaik.</p>
+    </div>
 
     <div id="game-container">
         <div id="warning-banner">⚠️ BAHAYA! BADAI PELURU 4 ARAH ⚠️</div>
@@ -288,6 +322,22 @@
     </div>
 
     <script>
+        // METODE OTOMATIS LOCK LANDSCAPE
+        async function lockLandscape() {
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+            } catch (err) {
+                console.log("Auto-lock orientation tidak didukung tanpa interaksi pengguna.");
+            }
+        }
+
+        // Panggil saat halaman dibuka atau disentuh pertama kali
+        window.addEventListener('load', lockLandscape);
+        window.addEventListener('touchstart', lockLandscape, { once: true });
+        window.addEventListener('click', lockLandscape, { once: true });
+
         let gameSpeed = 1;
 
         function toggleGameSpeed() {
@@ -303,23 +353,24 @@
             }
         }
 
-        function toggleFullScreen() {
+        async function toggleFullScreen() {
             let elem = document.documentElement;
             let btn = document.getElementById('btn-fullscreen');
 
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                if (elem.requestFullscreen) elem.requestFullscreen();
-                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-                else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
-                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
+                else if (elem.mozRequestFullScreen) await elem.mozRequestFullScreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
                 btn.innerText = "EXIT FULL";
             } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.msExitFullscreen) document.msExitFullscreen();
-                else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                if (document.exitFullscreen) await document.exitFullscreen();
+                else if (document.msExitFullscreen) await document.msExitFullscreen();
+                else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+                else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
                 btn.innerText = "FULLSCREEN";
             }
+            lockLandscape();
         }
 
         function updateFsBtn() {
@@ -1139,12 +1190,11 @@
         function update() {
             if(isGameOver) return;
 
-            // DIUBAH: Pemicu Badai Peluru dikunci tiap 2 menit (7200 frame)
             if(isHost) {
                 redZoneTimer++;
                 if(redZoneTimer >= redZoneNextInterval) {
                     redZoneTimer = 0;
-                    redZoneNextInterval = 7200; // Pas 2 menit sekali untuk gelombang berikutnya
+                    redZoneNextInterval = 7200; 
                     triggerRedZoneLocal();
                     broadcast({ type: 'TRIGGER_REDZONE' });
                 }
