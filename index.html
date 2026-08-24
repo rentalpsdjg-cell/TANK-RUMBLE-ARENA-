@@ -341,7 +341,6 @@
                 if (actx.state === 'suspended') actx.resume();
                 let now = actx.currentTime;
                 
-                // Bass synth retro pattern
                 let bassFreqs = [110, 110, 130, 98, 110, 110, 146, 123];
                 let freq = bassFreqs[bgmStep % bassFreqs.length];
 
@@ -451,7 +450,7 @@
         const MAP_HEIGHT = G * S;
 
         let camera = { x: 0, y: 0 };
-        let screenShake = 0; // Screen Shake intensity
+        let screenShake = 0;
 
         let peer = null, mySlot = 0, isHost = false, isBotMode = false;
         let isSpectator = false;
@@ -468,7 +467,6 @@
         let syncTimer = 0;
         let animationFrameId = null;
 
-        // DIKUNCI 2 MENIT (120 Detik / 7200 frame)
         let redZoneTimer = 0;
         let redZoneNextInterval = 7200;
 
@@ -506,19 +504,34 @@
 
         function selectGameMode(limit, btnId) {
             maxPlayersLimit = limit;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#mode-1v1, #mode-1v4, #mode-1v8').forEach(b => b.classList.remove('active'));
             document.getElementById(btnId).classList.add('active');
             updateConnectedStatus();
+            
+            // Broadcast ke semua player jika Host mengubah limit slot
+            if (isHost && !isBotMode) {
+                broadcast({ type: 'UPDATE_LIMIT', maxPlayers: maxPlayersLimit });
+            }
         }
 
         function updateConnectedStatus() {
-            let count = isHost ? (connections.length + 1) : 1;
+            let activeConnections = connections.filter(c => c && c.open);
+            let count = isHost ? (activeConnections.length + 1) : 1;
             document.getElementById('connected-count').innerText = `Pemain Terhubung: ${count} / ${maxPlayersLimit}`;
         }
 
         function initPeerServer(customId = null) {
             if(peer) { try { peer.destroy(); } catch(e){} }
-            let config = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+            let config = { 
+                config: { 
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }, 
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' }
+                    ] 
+                } 
+            };
             return customId ? new Peer(customId, config) : new Peer(config);
         }
 
@@ -540,15 +553,25 @@
             });
 
             peer.on('connection', conn => {
+                // KORERSI PENTING 1: Batasi slot koneksi maksimal hingga 8 pemain
+                if (connections.filter(c => c && c.open).length >= maxPlayersLimit - 1) {
+                    conn.on('open', () => {
+                        conn.send({ type: 'ROOM_FULL' });
+                        setTimeout(() => conn.close(), 500);
+                    });
+                    return;
+                }
+
                 connections.push(conn);
-                updateConnectedStatus();
-                let assignedSlot = connections.length;
+                let assignedSlot = connections.length; // Slot 1 hingga 7 untuk client
 
                 conn.on('open', () => {
+                    updateConnectedStatus();
                     setNetStatus(`P${assignedSlot+1} TERHUBUNG! SINKRONISASI...`, "#00ff66");
+                    
                     conn.send({ type: 'INIT_SLOT', slot: assignedSlot, maxPlayers: maxPlayersLimit, speed: gameSpeed }); 
                     
-                    broadcast({ type: 'UPDATE_PLAYERS', total: connections.length + 1 });
+                    broadcast({ type: 'UPDATE_PLAYERS', total: connections.filter(c => c && c.open).length + 1, maxPlayers: maxPlayersLimit });
                     powerUps.forEach(p => conn.send({ type: 'SPAWN_POWERUP', item: p }));
                 });
 
@@ -557,6 +580,9 @@
                     connections = connections.filter(c => c !== conn);
                     setNetStatus("TEMAN TERPUTUS!", "#ff0055"); 
                     updateConnectedStatus(); 
+                    if (isHost) {
+                        broadcast({ type: 'UPDATE_PLAYERS', total: connections.filter(c => c && c.open).length + 1, maxPlayers: maxPlayersLimit });
+                    }
                 });
                 conn.on('error', err => console.log("Conn Error:", err));
             });
@@ -615,10 +641,19 @@
         }
 
         function handleData(data, senderSlot) {
-            if(data.type === 'INIT_SLOT') {
+            if (data.type === 'ROOM_FULL') {
+                alert("Room sudah penuh!");
+                setNetStatus("ROOM SUDAH PENUH!", "#ff0055");
+            } else if(data.type === 'INIT_SLOT') {
                 mySlot = data.slot; maxPlayersLimit = data.maxPlayers;
                 if (data.speed) { gameSpeed = data.speed; document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`; }
                 document.getElementById('player-id-tag').innerText = isSpectator ? "👨‍⚖️ JURI" : `P${mySlot+1} (KAMU)`;
+            } else if(data.type === 'UPDATE_LIMIT') {
+                maxPlayersLimit = data.maxPlayers;
+                updateConnectedStatus();
+            } else if(data.type === 'UPDATE_PLAYERS') {
+                maxPlayersLimit = data.maxPlayers || maxPlayersLimit;
+                document.getElementById('connected-count').innerText = `Pemain Terhubung: ${data.total} / ${maxPlayersLimit}`;
             } else if(data.type === 'START_MATCH') {
                 currentRound = data.round || 1; maxPlayersLimit = data.maxPlayers;
                 if (data.speed) { gameSpeed = data.speed; document.getElementById('btn-speed').innerText = `SPEED ${gameSpeed}x`; }
@@ -743,14 +778,26 @@
 
         function initFullMatch(mapType = 0, weaponType = 'cannon') {
             currentRound = 1;
-            let totalPlayers = isBotMode ? maxPlayersLimit : (isHost ? (connections.length + 1) : maxPlayersLimit);
+            
+            // KOREKSI PENTING 2: Selalu gunakan maxPlayersLimit untuk total tank di arena (Isi slot kosong dengan BOT)
+            let totalPlayers = maxPlayersLimit;
 
             let diff = document.getElementById('bot-difficulty').value;
             let botSpdMulti = diff === 'easy' ? 0.75 : (diff === 'hard' ? 1.1 : 0.9);
 
             tanks = [];
             for(let i=0; i<totalPlayers; i++) {
-                let isBot = isBotMode && (i !== mySlot || isSpectator);
+                // Tentukan apakah slot ini dimainkan oleh Human Player atau Bot AI
+                let isHuman = false;
+                if (isBotMode) {
+                    isHuman = (i === mySlot && !isSpectator);
+                } else {
+                    if (i === 0) isHuman = true; // Host
+                    else isHuman = (i <= connections.length && connections[i-1] && connections[i-1].open);
+                }
+
+                let isBot = !isHuman;
+
                 tanks.push({
                     id: i, isBot: isBot, name: isBot ? `BOT ${i+1}` : `P${i+1}`,
                     x: 0, y: 0, angle: 90,
@@ -771,9 +818,16 @@
         function startNextRound(mapType = 0) {
             generateMap(mapType);
             
+            // KOREKSI PENTING 3: Berikan 8 Koordinat Spawn yang unik dan terpisah jauh untuk 8 Pemain
             let spawnCoords = [
-                {x:3, y:3, angle:90},    {x:41, y:41, angle:270}, {x:41, y:3, angle:180},  {x:3, y:41, angle:0},
-                {x:22, y:3, angle:90},   {x:22, y:41, angle:270}, {x:3, y:22, angle:0},    {x:41, y:22, angle:180}
+                {x:3,  y:3,  angle:90},   // P1 Top-Left
+                {x:41, y:41, angle:270},  // P2 Bottom-Right
+                {x:41, y:3,  angle:180},  // P3 Top-Right
+                {x:3,  y:41, angle:0},    // P4 Bottom-Left
+                {x:22, y:3,  angle:90},   // P5 Top-Center
+                {x:22, y:41, angle:270},  // P6 Bottom-Center
+                {x:3,  y:22, angle:0},    // P7 Mid-Left
+                {x:41, y:22, angle:180}   // P8 Mid-Right
             ];
 
             tanks.forEach((t, i) => {
@@ -790,7 +844,6 @@
 
             bullets = []; particles = []; powerUps = []; isGameOver = false; powerUpSpawnTimer = 0;
             
-            // RESET KE 2 MENIT
             redZoneTimer = 0; 
             redZoneNextInterval = 7200;
 
@@ -1139,12 +1192,11 @@
         function update() {
             if(isGameOver) return;
 
-            // DIUBAH: Pemicu Badai Peluru dikunci tiap 2 menit (7200 frame)
             if(isHost) {
                 redZoneTimer++;
                 if(redZoneTimer >= redZoneNextInterval) {
                     redZoneTimer = 0;
-                    redZoneNextInterval = 7200; // Pas 2 menit sekali untuk gelombang berikutnya
+                    redZoneNextInterval = 7200;
                     triggerRedZoneLocal();
                     broadcast({ type: 'TRIGGER_REDZONE' });
                 }
